@@ -54,5 +54,5 @@ Source and Release "Soon"
 
 # Thanks
 
-[Psychlist1972]() - Created the Midi Module which made this all possible.
-[JakobGSvendsen]() - Created PSDJ which gave me a quick start and gave me the idea for this project.
+*[Psychlist1972](https://github.com/Psychlist1972) - Created the Midi Module which made this all possible.
+*[JakobGSvendsen](https://github.com/JakobGSvendsen) - Created PSDJ which gave me a quick start and gave me the idea for this project.
