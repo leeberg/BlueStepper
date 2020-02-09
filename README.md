@@ -50,6 +50,8 @@ Here are some classics with some parts that have been sequenced from scratch usi
 * Madonna - Papa don't Preach
 
 # Usage
+
+## Playing a Song
 ```powershell
 #Demo Song Play.ps1
 
@@ -67,6 +69,39 @@ Set-BSTiming -BPM $MySong.BPM
 # Let's Play
 Invoke-BSPlaySong -Song $MySong
 
+```
+
+## Sequencing a Pattern
+
+```powershell
+[hashtable]$DrumSteps = @{ }
+$DrumSteps.Add(1, ("Kick"))
+$DrumSteps.Add(2, (""))
+$DrumSteps.Add(3, (""))
+$DrumSteps.Add(4, (""))
+#################################
+$DrumSteps.Add(5, ("Kick","Snare"))
+$DrumSteps.Add(6, (""))
+$DrumSteps.Add(7, (""))
+$DrumSteps.Add(8, (""))
+#################################
+$DrumSteps.Add(9, ("Kick"))
+$DrumSteps.Add(10, (""))
+$DrumSteps.Add(11, ("Kick"))
+$DrumSteps.Add(12, (""))
+#################################
+$DrumSteps.Add(13, ("Kick", "Snare"))
+$DrumSteps.Add(14, (""))
+$DrumSteps.Add(15, (""))
+$DrumSteps.Add(16, (""))
+```
+
+## Loading a Pattern
+
+```powershell
+Invoke-BSLoadPattern -Pattern $DrumSteps -StartStep 1 -EndStep 16
+Invoke-BSLoadPattern -Pattern $DrumSteps2 -StartStep 17 -EndStep 32
+Invoke-BSLoadPattern -Pattern $DrumSteps -StartStep 33 -EndStep 128
 ```
 
 # Download
