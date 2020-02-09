@@ -56,7 +56,7 @@ Here are some classics with some parts that have been sequenced from scratch usi
 
 # Import Modules
 Import-Module "PeteBrown.PowerShellMidi" -Force
-Import-Module "BlueStepper1" -Force
+Import-Module "BlueStepper" -Force
 
 # Setup Outputs
 Set-BSDrumOutput -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0000#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}" -MidiChannel 9
