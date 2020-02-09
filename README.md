@@ -38,6 +38,7 @@ in a very simple and "PowerShell'ey" way that is very noobie friendly. This was 
 # Demos
 Here are some classics with some parts that have been sequenced from scratch using BlueStepper and played on real synthesizers
 
+* [EDM Examples](https://twitter.com/LeeAlanBerg/status/1225648709033005056)
 * [New Order - Blue Monday](https://twitter.com/LeeAlanBerg/status/1226074288538685440)
 * [Kraftwerk - We are the Robots](https://twitter.com/LeeAlanBerg/status/1226281609156059137)
 * [The Human League - Don't You Want Me](https://twitter.com/LeeAlanBerg/status/1226318499867480064)
