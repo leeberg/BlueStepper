@@ -77,7 +77,7 @@ Invoke-BSPlayBack -Song $MySong
 
 ```
 
-## Creating a Pattern
+## Creating a Drum Pattern
 
 ```powershell
 [hashtable]$DrumSteps = @{ }
@@ -105,6 +105,59 @@ $MyDrumPattern = [PSCustomObject]@{
     Name = "My Hello World Drum Pattern"
     Type = "drum"
     Pattern = $DrumSteps 
+}
+
+```
+
+## Creating a Bass/Synth Pattern
+
+```powershell
+[hashtable]$BassSteps = @{ }
+$BassSteps.Add(1, ("D4"))
+$BassSteps.Add(2, (""))
+$BassSteps.Add(3, ("C4"))
+$BassSteps.Add(4, (""))
+#################################
+$BassSteps.Add(5, ("D4"))
+$BassSteps.Add(6, (""))
+$BassSteps.Add(7, ("C4"))
+$BassSteps.Add(8, (""))
+#################################
+$BassSteps.Add(9, ("D4"))
+$BassSteps.Add(10, ("D4"))
+$BassSteps.Add(11, (""))
+$BassSteps.Add(12, (""))
+#################################
+$BassSteps.Add(13, ("F4"))
+$BassSteps.Add(14, ("F4"))
+$BassSteps.Add(15, (""))
+$BassSteps.Add(16, (""))
+#################################
+$BassSteps.Add(17, ("D4"))
+$BassSteps.Add(18, (""))
+$BassSteps.Add(19, ("C4"))
+$BassSteps.Add(20, (""))
+#################################
+$BassSteps.Add(21, ("D4"))
+$BassSteps.Add(22, (""))
+$BassSteps.Add(23, ("C4"))
+$BassSteps.Add(24, (""))
+#################################
+$BassSteps.Add(25, ("D4"))
+$BassSteps.Add(26, (""))
+$BassSteps.Add(27, ("D3"))
+$BassSteps.Add(28, ("D3"))
+#################################
+$BassSteps.Add(29, ("D3"))
+$BassSteps.Add(30, ("D3"))
+$BassSteps.Add(31, (""))
+$BassSteps.Add(32, (""))
+#################################
+
+$BassSequence1 = [PSCustomObject]@{
+    Name = "Robots Bass"
+    Type = "bass"
+    Pattern = $BassSteps 
 }
 
 ```
