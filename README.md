@@ -36,7 +36,7 @@ in a very simple and "PowerShell'ey" way that is very noobie friendly. This was 
 * Debug Output! 
 
 # Demos
-Here are some classics with have parts sequenced from scratch using BlueStepper and played on real synthesizers
+Here are some classics with some parts that have been sequenced from scratch using BlueStepper and played on real synthesizers
 
 * [New Order - Blue Monday](https://twitter.com/LeeAlanBerg/status/1226074288538685440)
 * [Kraftwerk - We are the Robots](https://twitter.com/LeeAlanBerg/status/1226281609156059137)
@@ -50,7 +50,7 @@ Here are some classics with have parts sequenced from scratch using BlueStepper 
 * Madonna - Papa don't Preach
 
 # Download
-Source and Release "Soon"
+Source, Release, Docs "Soon"
 
 # Thanks
 
