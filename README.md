@@ -3,7 +3,7 @@ PowerShell BPM Based MIDI Step Sequencer for Windows 10
 
 ![](./img/bluestepper.png)
 
-# What is this thing
+# "80's as code"
 
 BlueStepper is a very simple PowerShell based 16th note [Step Sequencer](https://en.wikipedia.org/wiki/Music_sequencer) which allows for definition of the note sequence and tempo through PowerShell in order to sequence external Midi devices
 
@@ -14,13 +14,13 @@ Each "Step" is simply an element in a PowerShell [Hasthtable](https://docs.micro
 
 This module uses [Psychlist1972's PowerShell MIDI Module](https://github.com/Psychlist1972/Windows-10-PowerShell-MIDI) for all MIDI Operations which uses the [multi-client MIDI API for Windows 10](https://blogs.windows.com/windowsdeveloper/2016/09/21/midi-enhancements-in-windows-10/). Therefore BlueStepper is **only compatible with Windows 10**.
 
-In **Play mode**, the hashtable is iterated through in time to the set [BPM](https://en.wikipedia.org/wiki/Tempo) of the sequencer played each elements defined note. The time it takes PowerShell to trigger each note during step playback is measured and subtracted from the total step time to attempt to keep timing.
+In **Play mode**, the hashtable patterns are iterated through in time to the set [BPM](https://en.wikipedia.org/wiki/Tempo) of the sequencer, playing the notes defined in the patterns. The time it takes PowerShell to trigger each note during step playback is measured and subtracted from the total step time to attempt to keep timing.
 
-Typically it takes less than 1ms to perform a note operation, this leaves over 100ms in a 120BPM 16th step. Complex Steps may take up to 25ms. It's certainly not professional grade but to the novice ear it's not really noticeable!
+Typically it takes less than 1ms to perform a note operation, this leaves over a 100ms idle wait time in a 120BPM 16th step, plenty of headroom! Complex Steps may take up to 25ms. It's certainly not professional grade but to the novice ear it's not really noticeable!
 
 The best use case it combining BlueStepper with a USB Midi Interface to send notes to Drum Machines, Synthesizers, or any other device with a MIDI input.
 
-It's very simple and quite "PowerShell'ey" - This was never meant to be the "BE ALL END ALL" step sequencer, but it can do some pretty cool things and sounds pretty good! 
+It's very simple and quite "PowerShell'ey" - This was never meant to be the "BE ALL END ALL" step sequencer, but it can do some pretty cool things and sounds pretty good! *80's as code*🎹
 
 # Features
 * Simple and very PowerShell friendly - make some cool beats and learn PowerShell at the same time!
