@@ -12,7 +12,7 @@ Each "Step" is simply an element in a PowerShell [Hasthtable](https://docs.micro
 ![](./img/drumsteps.png)
 
 
-This module uses [Psychlist1972's PowerShell MIDI Module](Windows-10-PowerShell-MIDI) for all MIDI Operations which uses the [multi-client MIDI API for Windows 10](https://blogs.windows.com/windowsdeveloper/2016/09/21/midi-enhancements-in-windows-10/). Therefore BlueStepper is **only compatible with Windows 10**.
+This module uses [Psychlist1972's PowerShell MIDI Module](https://github.com/Psychlist1972/Windows-10-PowerShell-MIDI) for all MIDI Operations which uses the [multi-client MIDI API for Windows 10](https://blogs.windows.com/windowsdeveloper/2016/09/21/midi-enhancements-in-windows-10/). Therefore BlueStepper is **only compatible with Windows 10**.
 
 In **Play mode**, the hashtable is iterated through in time to the set [BPM](https://en.wikipedia.org/wiki/Tempo) of the sequencer played each elements defined note. The time it takes PowerShell to trigger each note during step playback is measured and subtracted from the total step time to attempt to keep timing.
 
@@ -52,4 +52,7 @@ Here are some classics with have parts sequenced from scratch using BlueStepper 
 # Download
 Source and Release "Soon"
 
+# Thanks
 
+[Psychlist1972]() - Created the Midi Module which made this all possible.
+[JakobGSvendsen]() - Created PSDJ which gave me a quick start and gave me the idea for this project.
