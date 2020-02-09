@@ -16,13 +16,11 @@ This module uses [Psychlist1972's PowerShell MIDI Module](https://github.com/Psy
 
 In **Play mode**, the hashtable is iterated through in time to the set [BPM](https://en.wikipedia.org/wiki/Tempo) of the sequencer played each elements defined note. The time it takes PowerShell to trigger each note during step playback is measured and subtracted from the total step time to attempt to keep timing.
 
-Typically it takes less than 1ms to perform note operations, this leaves over 100ms in a 120BPM 16th step. Complex Steps may take up to 10ms - certainly not professional grade but to the novice ear it's imperceptible!
+Typically it takes less than 1ms to perform a note operation, this leaves over 100ms in a 120BPM 16th step. Complex Steps may take up to 10ms - certainly not professional grade but to the novice ear it's imperceptible!
 
 The best use case it combining BlueStepper with a USB Midi Interface to send notes to Drum Machines, Synthesizers, or any other device with a MIDI input.
 
-
-used to interact with Midi Interfaces to send midi notes to external interfaces.
-in a very simple and "PowerShell'ey" way that is very noobie friendly. This was never meant to be the "BE ALL END ALL" step sequencer, but it can do some pretty cool things and sounds pretty good! 
+It's very simple and quite "PowerShell'ey" - This was never meant to be the "BE ALL END ALL" step sequencer, but it can do some pretty cool things and sounds pretty good! 
 
 # Features
 * Simple and very PowerShell friendly - make some cool beats and learn PowerShell at the same time!
