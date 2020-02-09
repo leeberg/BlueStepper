@@ -148,7 +148,7 @@ $SongPatternSequence.Add(1, ($DrumSequence1))
 $SongPatternSequence.Add(17, ($DrumSequence2,$BassSequence1))
 
 # DrumSequence 1 will start to play on Step 1
-# DrumSequence 2 will start to play on Step 2 (replacing DrumSequence 1)
+# DrumSequence 2 will start to play on Step 17 (replacing DrumSequence 1)
 
 ``
 
