@@ -1,4 +1,4 @@
-# 💙🥁🎹🎶 BlueStepper 🎶🎹🥁💙
+# BlueStepper 🎶🎹🥁💙
 PowerShell BPM Based MIDI Step Sequencer for Windows 10
 
 ![](./img/bluestepper.png)
