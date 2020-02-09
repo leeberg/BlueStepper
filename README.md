@@ -49,6 +49,26 @@ Here are some classics with some parts that have been sequenced from scratch usi
 * Depeche Mode - Never Let Me Down Again
 * Madonna - Papa don't Preach
 
+# Usage
+```powershell
+#Demo Song Play.ps1
+
+# Import Modules
+Import-Module "PeteBrown.PowerShellMidi" -Force
+Import-Module "BlueStepper1" -Force
+
+# Setup Outputs
+Set-BSDrumOutput -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0000#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}" -MidiChannel 9
+Set-BSBassOutput -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0001#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}" -MidiChannel 0
+
+$MySong = .\Songs\KraftWerk-Robots.ps1
+Set-BSTiming -BPM $MySong.BPM
+
+# Let's Play
+Invoke-BSPlaySong -Song $MySong
+
+```
+
 # Download
 Source, Release, Docs "Soon"
 
