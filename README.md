@@ -44,6 +44,8 @@ Here are some classics with some parts that have been sequenced from scratch usi
 * [New Order - Blue Monday](https://twitter.com/LeeAlanBerg/status/1226074288538685440)
 * [Kraftwerk - We are the Robots](https://twitter.com/LeeAlanBerg/status/1226281609156059137)
 * [The Human League - Don't You Want Me](https://twitter.com/LeeAlanBerg/status/1226318499867480064)
+
+## Coming Soon
 * Cyndi Lauper - She Bop
 * Dead or Alive - You Spin me right Round
 * Rick Astley - Never Gonna Give You Up
@@ -51,6 +53,7 @@ Here are some classics with some parts that have been sequenced from scratch usi
 * Depeche Mode - Just Can't Get Enough
 * Depeche Mode - Never Let Me Down Again
 * Madonna - Papa don't Preach
+* Gary Numan - Are Friends Electric
 
 # Usage
 
