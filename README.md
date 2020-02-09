@@ -9,7 +9,7 @@ BlueStepper is a very simple PowerShell based 16th note [Step Sequencer](https:/
 
 Each "Step" is simply an element in a PowerShell [Hasthtable](https://docs.microsoft.com/en-us/dotnet/api/system.collections.hashtable?view=netframework-4.8) that is populated with strings indicating which Note should be played.
 
-![](img\drumsteps.png)
+![](\img\drumsteps.png)
 
 This module uses [Psychlist1972's PowerShell MIDI Module](Windows-10-PowerShell-MIDI) for all MIDI Operations which uses the [multi-client MIDI API for Windows 10](https://blogs.windows.com/windowsdeveloper/2016/09/21/midi-enhancements-in-windows-10/). Therefore BlueStepper is **only compatible with Windows 10**.
 
