@@ -1,5 +1,5 @@
 # BlueStepper 🎶🎹🥁💙
-PowerShell BPM Based MIDI Step Sequencer for Windows 10 - that is **coming SOON** - undergoing addition more testing/optimizations prior to release.
+PowerShell BPM Based MIDI Step Sequencer for Windows 10 - that is **coming SOON** - undergoing additional testing/optimizations prior to release.
 
 ![](./img/bluestepper.png)
 
