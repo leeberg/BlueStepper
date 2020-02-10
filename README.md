@@ -44,9 +44,9 @@ Here are some classics with some parts that have been sequenced from scratch usi
 * [New Order - Blue Monday](https://twitter.com/LeeAlanBerg/status/1226074288538685440)
 * [Kraftwerk - We are the Robots](https://twitter.com/LeeAlanBerg/status/1226281609156059137)
 * [The Human League - Don't You Want Me](https://twitter.com/LeeAlanBerg/status/1226318499867480064)
+* [Berlin - Take My Breath Away](https://twitter.com/LeeAlanBerg/status/1226684454015578114)
 
 ## Demos Coming Soon
-* Berlin - Take My Breath Away
 * Depeche Mode - Just Can't Get Enough
 * Depeche Mode - Never Let Me Down Again
 * Gary Numan - Are Friends Electric
