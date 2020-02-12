@@ -16,7 +16,7 @@ This module uses [Psychlist1972's PowerShell MIDI Module](https://github.com/Psy
 
 In **Play mode**, the hashtable patterns are iterated through in time to the set [BPM](https://en.wikipedia.org/wiki/Tempo) of the sequencer, playing the notes defined in the patterns. The time it takes PowerShell to trigger each note during step playback is measured and subtracted from the total step time to attempt to keep timing.
 
-Typically it takes less than 1ms to perform a note operation, but with sequencing average time is about 5ms; this leaves over a 100ms idle wait time in a 120BPM 16th step. Complex Steps and Random SlowDowns may take up to 25ms. Overall the timekeeping is unquestionably  not a professional grade, but serviceable for having fun!
+Typically it takes less than 1ms to perform a note operation, but with sequencing average time is about 1-2ms to send a Drum and two intrsument notes on the same step. This leaves over a 100ms idle wait time in a 120BPM 16th step and sounds decent. Currently random Random SlowDowns in the 10-20ms seem to happen once ever few hundred steps but seem to be PowerShell related. Overall the timekeeping is unquestionably not a professional grade, but serviceable for having fun!
 
 The primary use case for BlueStepper is to use it with a USB Midi Interface to send notes to Drum Machines, Synthesizers, or any other device with a MIDI input.
 
@@ -35,6 +35,7 @@ It's very simple and quite "PowerShell'ey" - This was never meant to be the "BE 
 
 # Todo 
 * Better Performance - Especially for Stop-Notes
+* Midi CLock - Even if it's not perfect a slight drifting clock control to control multiple devices could still be useful!
 * Arpeggiator
 
 # Demos
@@ -55,23 +56,43 @@ Here are some classics with some parts that have been sequenced from scratch usi
 
 # Usage
 
+## Setting Up
+
+```powershell
+# Import Modules
+Import-Module "C:\Users\lee\Windows-10-PowerShell-MIDI\PeteBrown.PowerShellMidi\bin\Debug\PeteBrown.PowerShellMidi.dll" -Force
+Import-Module "C:\Users\lee\bluestep_alpha\Module\BlueStepper.psd1" -Force
+
+# Setup Midi Interface Device Outputs
+$TX1 = New-BSMidiOutputDevice -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0000#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}"
+$TX2 = New-BSMidiOutputDevice -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0001#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}"
+
+# Setup Instruments - TODO Reconsider this, maybe the sequ
+$DrumMachine = New-BSInstrument -Name "Arturia Drumbrute Impact" -Instrument "Drum" -MidiOutputDevice $TX1 -MidiChannel 9
+$SynthBass = New-BSInstrument -Name "Korg Volca FM" -Instrument "Bass" -MidiOutputDevice $TX2 -MidiChannel 0
+$SynthLead = New-BSInstrument -Name "Korg Volca Keys" -Instrument "Synth" -MidiOutputDevice $TX2 -MidiChannel 1
+
+# Set Instruments as Active
+# Note - this will allow us switch out devices / Instruments on the fly in the middle of a song
+Set-BSActiveInstrument -Instrument $DrumMachine
+Set-BSActiveInstrument -Instrument $SynthBass
+Set-BSActiveInstrument -Instrument $SynthLead
+```
+
 ## Playing a Demo Song
 ```powershell
 #Demo Song Play.ps1
 
-# Import Modules
-Import-Module "PeteBrown.PowerShellMidi" -Force
-Import-Module "BlueStepper" -Force
 
-# Setup Outputs
-Set-BSDrumOutput -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0000#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}" -MidiChannel 9
-Set-BSBassOutput -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0001#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}" -MidiChannel 0
+# Load Song
+$Song1 = .\Songs\Robots.ps1
+$Song2 = .\Songs\BlueMonday.ps1
+$Song3 = .\Songs\PapaDontPreach.ps1
+$Song4 = .\Songs\DontYouWantMe.ps1
 
-# Select Song
-$MySong = .\Songs\KraftWerk-Robots.ps1
+# Let's Play 
+Invoke-BSPlayBack -Song $Song3 
 
-# Let's Play
-Invoke-BSPlayBack -Song $MySong
 
 ```
 
@@ -79,84 +100,57 @@ Invoke-BSPlayBack -Song $MySong
 
 ```powershell
 [hashtable]$DrumSteps = @{ }
-$DrumSteps.Add(1, ("Kick"))
+$DrumSteps.Add(1, (New-BSDrumStep -DrumNote "Kick"))
 $DrumSteps.Add(2, (""))
 $DrumSteps.Add(3, (""))
 $DrumSteps.Add(4, (""))
 #################################
-$DrumSteps.Add(5, ("Kick","Snare"))
+$DrumSteps.Add(5, ((New-BSDrumStep -DrumNote "Kick"), (New-BSDrumStep -DrumNote "Snare")))
 $DrumSteps.Add(6, (""))
 $DrumSteps.Add(7, (""))
 $DrumSteps.Add(8, (""))
 #################################
-$DrumSteps.Add(9, ("Kick"))
+$DrumSteps.Add(9, (New-BSDrumStep -DrumNote "Kick"))
 $DrumSteps.Add(10, (""))
-$DrumSteps.Add(11, ("Kick"))
+$DrumSteps.Add(11, (New-BSDrumStep -DrumNote "Kick"))
 $DrumSteps.Add(12, (""))
 #################################
-$DrumSteps.Add(13, ("Kick", "Snare"))
+$DrumSteps.Add(13, ((New-BSDrumStep -DrumNote "Kick"), (New-BSDrumStep -DrumNote "Snare")))
 $DrumSteps.Add(14, (""))
 $DrumSteps.Add(15, (""))
 $DrumSteps.Add(16, (""))
 
-$MyDrumPattern = [PSCustomObject]@{
-    Name = "My Hello World Drum Pattern"
-    Type = "drum"
-    Pattern = $DrumSteps 
-}
+
+$MyDrumPattern = New-BSPattern -Name "MainDrums" -Instrument "Drum" -Notes $DrumSteps
+
 
 ```
 
 ## Creating a Bass/Synth Pattern
 
 ```powershell
-[hashtable]$BassSteps = @{ }
-$BassSteps.Add(1, ("D4"))
+$BassSteps = @{ }
+$BassSteps.Add(1, (New-BSStep -MusicNote "D4" -Velocity 12 -NoteLength 25))
 $BassSteps.Add(2, (""))
-$BassSteps.Add(3, ("C4"))
+$BassSteps.Add(3, (New-BSStep -MusicNote "C4" -Velocity 25))
 $BassSteps.Add(4, (""))
 #################################
-$BassSteps.Add(5, ("D4"))
+$BassSteps.Add(5, (New-BSStep -MusicNote "D4" -Velocity 50))
 $BassSteps.Add(6, (""))
-$BassSteps.Add(7, ("C4"))
+$BassSteps.Add(7, (New-BSStep -MusicNote "C4" -Velocity 75))
 $BassSteps.Add(8, (""))
 #################################
-$BassSteps.Add(9, ("D4"))
-$BassSteps.Add(10, ("D4"))
+$BassSteps.Add(9, (New-BSStep -MusicNote "D4" -Velocity 100))
+$BassSteps.Add(10, (New-BSStep -MusicNote "D4" -Velocity 125))
 $BassSteps.Add(11, (""))
 $BassSteps.Add(12, (""))
 #################################
-$BassSteps.Add(13, ("F4"))
-$BassSteps.Add(14, ("F4"))
+$BassSteps.Add(13, (New-BSStep -MusicNote "F4" -Velocity 100))
+$BassSteps.Add(14, (New-BSStep -MusicNote "F4" -Velocity 100))
 $BassSteps.Add(15, (""))
 $BassSteps.Add(16, (""))
-#################################
-$BassSteps.Add(17, ("D4"))
-$BassSteps.Add(18, (""))
-$BassSteps.Add(19, ("C4"))
-$BassSteps.Add(20, (""))
-#################################
-$BassSteps.Add(21, ("D4"))
-$BassSteps.Add(22, (""))
-$BassSteps.Add(23, ("C4"))
-$BassSteps.Add(24, (""))
-#################################
-$BassSteps.Add(25, ("D4"))
-$BassSteps.Add(26, (""))
-$BassSteps.Add(27, ("D3"))
-$BassSteps.Add(28, ("D3"))
-#################################
-$BassSteps.Add(29, ("D3"))
-$BassSteps.Add(30, ("D3"))
-$BassSteps.Add(31, (""))
-$BassSteps.Add(32, (""))
-#################################
 
-$BassSequence1 = [PSCustomObject]@{
-    Name = "Robots Bass"
-    Type = "bass"
-    Pattern = $BassSteps 
-}
+$BassPattern1 = New-BSPattern -Name "IntroBass" -Instrument "Bass" -Notes $BassSteps
 
 ```
 
@@ -169,40 +163,17 @@ Invoke-BSPlayBack -DrumPattern $MyDrumPattern
 
 ## Sequencing Patterns into a "Song"
 ```powershell
-[hashtable]$IntroDrumSteps = @{ }
-$IntroDrumSteps.Add(1, ("Kick"))
-$IntroDrumSteps.Add(2, (""))
-$IntroDrumSteps.Add(3, (""))
-$IntroDrumSteps.Add(4, (""))
-
-[hashtable]$MainDrumSteps = @{ }
-$MainDrumSteps.Add(1, ("Kick"))
-$MainDrumSteps.Add(2, (""))
-$MainDrumSteps.Add(3, (""))
-$MainDrumSteps.Add(4, (""))
-$MainDrumSteps.Add(5, ("Snare"))
-$MainDrumSteps.Add(6, (""))
-$MainDrumSteps.Add(7, (""))
-$MainDrumSteps.Add(8, (""))
-
-$DrumSequence1 = [PSCustomObject]@{
-    Name = "Hello Intro Drums"
-    Type = "drum"
-    Pattern = $IntroDrumSteps 
+$SongSequence = New-BSSequence -SequencePatterns @{
+    # Todo Function for STOP 
+    1 = ($DrumIntro)
+    17 = ($DrumMain,$BassPattern1)
 }
-
-$DrumSequence2 = [PSCustomObject]@{
-    Name = "Hello Main Drums"
-    Type = "drum"
-    Pattern = $MainDrumSteps
-}
-
-[hashtable]$SongPatternSequence = @{ }
-$SongPatternSequence.Add(1, ($DrumSequence1))
-$SongPatternSequence.Add(17, ($DrumSequence2,$BassSequence1))
 
 # DrumSequence 1 will start to play on Step 1
 # DrumSequence 2 will start to play on Step 17 (replacing DrumSequence 1)
+# Bass Pattern 1 will also start to play on Step 17
+
+New-BSSong -Name $Name -BPM $BPM -TotalStepsToPlay $TotalStepsToPlay -Sequence $SongSequence
 
 ```
 
