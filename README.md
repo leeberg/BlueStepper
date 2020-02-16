@@ -7,6 +7,10 @@ PowerShell BPM Based MIDI Step Sequencer for Windows 10 - that is **coming SOON*
 
 BlueStepper is a simple PowerShell based 16th note [Step Sequencer](https://en.wikipedia.org/wiki/Music_sequencer) which allows for definition of the note sequence and tempo through PowerShell to sequence external Midi devices
 
+**Demo Video**:
+
+[![DemoVideo](https://img.youtube.com/vi/hf5Uzw1xWl0/0.jpg)](https://www.youtube.com/watch?v=hf5Uzw1xWl0)
+
 Each "Step" is simply an element in a PowerShell [Hasthtable](https://docs.microsoft.com/en-us/dotnet/api/system.collections.hashtable?view=netframework-4.8) that is populated with strings indicating which Note should be played, at which velocity, and for how long.
 
 ![](./img/drumsteps.png)
@@ -16,7 +20,7 @@ This module uses [Psychlist1972's PowerShell MIDI Module](https://github.com/Psy
 
 In **Play mode**, the hashtable patterns are iterated through in time to the set [BPM](https://en.wikipedia.org/wiki/Tempo) of the sequencer, playing the notes defined in the patterns. The time it takes PowerShell to trigger each note during step playback is measured and subtracted from the total step time to attempt to keep timing.
 
-Typically it takes less than 1ms to perform a note operation, but with sequencing average time is about 1-2ms to send a Drum and two intrsument notes on the same step. This leaves over a 100ms idle wait time in a 120BPM 16th step and sounds decent. Currently random Random SlowDowns in the 10-20ms seem to happen once ever few hundred steps but seem to be PowerShell related. Overall the timekeeping is unquestionably not a professional grade, but serviceable for having fun!
+Typically it takes less than 1ms to perform a note operation, but with sequencing average time is about 1ms or less to send a Drum and two intrsument notes on the same step. This leaves over a 100ms idle wait time in a 120BPM 16th step and sounds alright! Currently random Random SlowDowns in the 5-10ms seem to happen once ever few hundred steps but seem to be PowerShell related. Overall the timekeeping is unquestionably not a professional grade, but serviceable for having fun!
 
 The primary use case for BlueStepper is to use it with a USB Midi Interface to send notes to Drum Machines, Synthesizers, or any other device with a MIDI input.
 
@@ -185,3 +189,4 @@ Source, Release, Docs "Soon"
 
 * [Psychlist1972](https://github.com/Psychlist1972) - Created the Midi Module which made this all possible.
 * [JakobGSvendsen](https://github.com/JakobGSvendsen) - Created PSDJ which gave me a quick start and gave me the idea for this project.
+* [AdamDriscoll](https://github.com/AdamDriscoll) - Powershell performance and profling tips!
