@@ -185,3 +185,4 @@ Source, Release, Docs "Soon"
 
 * [Psychlist1972](https://github.com/Psychlist1972) - Created the Midi Module which made this all possible.
 * [JakobGSvendsen](https://github.com/JakobGSvendsen) - Created PSDJ which gave me a quick start and gave me the idea for this project.
+* [AdamDriscoll](https://github.com/AdamDriscoll) - Powershell performance and profling tips!
