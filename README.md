@@ -8,6 +8,7 @@ PowerShell BPM Based MIDI Step Sequencer for Windows 10 - that is **coming SOON*
 BlueStepper is a simple PowerShell based 16th note [Step Sequencer](https://en.wikipedia.org/wiki/Music_sequencer) which allows for definition of the note sequence and tempo through PowerShell to sequence external Midi devices
 
 **Demo Video**:
+
 [![DemoVideo](https://img.youtube.com/vi/hf5Uzw1xWl0/0.jpg)](https://www.youtube.com/watch?v=hf5Uzw1xWl0)
 
 Each "Step" is simply an element in a PowerShell [Hasthtable](https://docs.microsoft.com/en-us/dotnet/api/system.collections.hashtable?view=netframework-4.8) that is populated with strings indicating which Note should be played, at which velocity, and for how long.
