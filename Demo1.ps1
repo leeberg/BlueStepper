@@ -1,6 +1,6 @@
 # Import Modules
 Import-Module "C:\Users\lee\Windows-10-PowerShell-MIDI\PeteBrown.PowerShellMidi\bin\Debug\PeteBrown.PowerShellMidi.dll" -Force
-Import-Module "C:\Users\lee\bluestep_alpha\Module\BlueStepper.psd1" -Force
+Import-Module "C:\Users\lee\BlueStepper\Module\BlueStepper.psd1" -Force
 
 # Setup Midi Interface Device Outputs
 $Win10Midi = New-BSMidiOutputDevice -DeviceID "\\?\SWD#MMDEVAPI#MicrosoftGSWavetableSynth#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}"

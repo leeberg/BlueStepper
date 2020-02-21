@@ -10,7 +10,7 @@ Function Invoke-BSPlayBack {
     #Defaults   # todo - make this a Seqeuncer Settings PS Function
     $Global:BPM = 120
     $Global:ArpPattern = "UP_1"
-    $DebugTimer = New-Object System.Diagnostics.Stopwatch
+    $Global:DebugTimer = New-Object System.Diagnostics.Stopwatch
     $StepStopWatch = New-Object System.Diagnostics.Stopwatch
 
     $CurrentPlayBackStep = $StartStep
@@ -23,7 +23,7 @@ Function Invoke-BSPlayBack {
     $DrumStepNotesToPlay = $null
     $BassStepNotesToPlay = $null
     $SynthStepNotesToPlay = $null
-    $PlayBackTimingReport = @{}
+    $PlayBackTimingReport = @{ }
 
     if ($null -ne $Song) {
         Set-BSTiming -BPM $Song.BPM
@@ -41,7 +41,7 @@ Function Invoke-BSPlayBack {
         $CurrentBassPattern = $BassSequences | Where { ($_.FirstStep -eq $StartStep) }
         #Starting Synth Pattern
         $CurrentSynthPattern = $SynthSequences | Where { ($_.FirstStep -eq $StartStep) }
-        
+                
         if ($null -ne $CurrentDrumPattern) {
             $DrumStepNotesToPlay = $CurrentDrumPattern.Pattern.Pattern[1]
         }
@@ -51,9 +51,7 @@ Function Invoke-BSPlayBack {
         if ($null -ne $CurrentSynthPattern) {
             $SynthStepNotesToPlay = $CurrentSynthPattern.Pattern.Pattern[1]
         }
-        
-        
-        #Write-Host ("$Song")
+    
     }
     else {
         $CurrentDrumPattern = $DrumPattern
@@ -69,14 +67,15 @@ Function Invoke-BSPlayBack {
     
     # Start Step Timer
     $StepStopWatch.Start()
+    $Global:DebugTimer.Start()
 
     Do {
         #WE ARE LIVE 
-            # Play the Notes
-            # Then Afterwards do all the cleanup Sequence the next set
-        
+        # Play the Notes
+        # Then Afterwards do all the cleanup Sequence the next set
         
         Invoke-BSPlayStepNotes -DrumNotes $DrumStepNotesToPlay -BassNotes $BassStepNotesToPlay -SynthNotes $SynthStepNotesToPlay
+
         $PlayTime = $StepStopWatch.Elapsed.TotalMilliseconds
         #Done Playing
         #Increment all Steps to NEXT Step
@@ -133,11 +132,7 @@ Function Invoke-BSPlayBack {
         
         if ($Global:BSDebugMode -eq $true) {
             $Message = "STEP: " + ($CurrentPlayBackStep - 1) + " - "
-            #if ($DrumStepNotesToPlay -ne "" -and $null -ne $DrumStepNotesToPlay) { $Message += "[DRUM:$($DrumStepNotesToPlay.DrumNote)] "}
-            #elseif ($BassStepNotesToPlay -ne "" -and $null -ne $BassStepNotesToPlay) { $Message += "[BASS:$($BassStepNotesToPlay.MusicNote)] "}
-            #elseif ($SynthStepNotesToPlay -ne "" -and $null -ne $SynthStepNotesToPlay) { $Message += "[SYNTH:$($SynthStepNotesToPlay.MusicNote)] "}
-            #else { $Message += "NO NOTE "}
-            $Message += "PlayTime " + $PlayTime + "ms Sequencing - "+($SeqTime-$PlayTime)+"ms - Total: " + $SeqTime + "ms"
+            $Message += "PlayTime " + $PlayTime + "ms Sequencing - " + ($SeqTime - $PlayTime) + "ms - Total: " + $SeqTime + "ms"
             Write-Host $Message
         }
 
@@ -149,6 +144,7 @@ Function Invoke-BSPlayBack {
 
     Write-Host "Playback Completed" -ForegroundColor Cyan
     $StepStopWatch.Stop()
+    $Global:DebugTimer.Stop()
     
     # Close RunSpaces
     Foreach ($Runspace in $Global:NoteRunspaces) {
@@ -156,48 +152,37 @@ Function Invoke-BSPlayBack {
         $Runspace.PowerShell.EndInvoke($Runspace.Handler)
         $Runspace.PowerShell.Dispose()
     }
-    If ($null -ne $NoteOperationsPool) {  
+    If ($null -ne $NoteOperationsPool) {
         $NoteOperationsPool.Dispose()
     }
  
 }
 
-
-
-function Invoke-BSDrumShot {
-    param (
-        $MidiNumber = "",
-        $Velocity = 100
-    )
-    If ($MidiNumber -ne $null) {
-        Send-MidiNoteOnMessage -Note $MidiNumber -Channel $Global:BSDrumMidiChannel -Velocity 100 -Port $Global:BSDrumOutputPort
-    }
-    
-    
-}
-
 function Invoke-BSPlayNoteOnOff {
     param (
         $MidiNumber = $null,
-        $Downtime = 25,
+        $NoteLength = 20, # TODO Default Calculated NoteLength for a 16th step note in 4/4 at song BPM
         $Velocity = 100,
-        [ValidateSet("bass", "synth")]
-        $Instrument = "bass"
+        $MidiChannel = $null,
+        $OutputPort = $null,
+        $NoteOffObject
     )
-
+    
     if ($null -ne $MidiNumber -and $MidiNumber -ne "") {
-
-        $MidiChannel = if ($Instrument.ToLower() -eq "bass") { $Global:BSBassMidiChannel }elseif ($Instrument.ToLower() -eq "synth") { $Global:BSSynth1MidiChannel}
-        $OutputPort = if ($Instrument.ToLower() -eq "bass") { $Global:BSBassOutputPort }elseif ($Instrument.ToLower() -eq "synth") { $Global:BSSynth1OutputPort}
-
-        Send-MidiNoteOnMessage -Note $MidiNumber -Channel $MidiChannel -Velocity $Velocity -Port $OutputPort
+    
+        Send-MidiNoteOnMessage -Note $MidiNumber -Velocity $Velocity -Channel $MidiChannel -Port $OutputPort
 
         #### Queue Note Off
-        Invoke-BSQueueNoteOff -Note $MidiNumber -Channel $MidiChannel -Velocity $Velocity -Port $OutputPort -DownTime $DownTime
+        if ($NoteLength -ne 0) {
+            # TODO - NEed to pass in QUEUE TIME SO Note off can compare note time to current
+            Invoke-BSQueueNoteOff -MidiNumber $MidiNumber -Channel $MidiChannel -Velocity $Velocity -Port $OutputPort -NoteLength $NoteLength -NoteOffObject $NoteOffObject
+        }
         
         $MidiNumber = $null
+        $NoteOffObject = $null
 
     }
+
 
 }
 
@@ -288,8 +273,8 @@ Function Invoke-BSSetupBlockingCollections {
         Import-Module $MidiModulePath -Force
      
         foreach ($StepNote in $NoteStepQueue.GetConsumingEnumerable()) {
-            [System.Threading.Thread]::Sleep($StepNote.DownTime)
-            Send-MidiNoteOffMessage -Note $StepNote.Note -Channel $StepNote.Channel -Velocity $StepNote.Velocity -Port $StepNote.Port
+            [System.Threading.Thread]::Sleep($StepNote.NoteLength)
+            Send-MidiNoteOffMessage -Note $StepNote.MidiNumber -Channel $StepNote.Channel -Velocity $StepNote.Velocity -Port $StepNote.Port
         }
     }
 
@@ -308,34 +293,34 @@ Function Invoke-BSSetupBlockingCollections {
 
 }
 
-
-
-
-
 Function Invoke-BSQueueNoteOff {
 
     param (
-        $Note,
+        $MidiNumber,
         $Channel,
         $Velocity,
         $Port,
-        $DownTime
+        $NoteLength,
+        $NoteOffObject = $null
     )
-    
 
-        #TODO - IDK about creating a PSCUSTOM OBJECT IN REALTIME - might be too slow...
-        $InstrumentNoteToQueue = [PSCustomObject]@{ 
-            Note     = $Note
+    #TODO - IDK about creating a PSCUSTOM OBJECT IN REALTIME - might be too slow...
+    if($null -ne $NoteOffObject)
+    {
+        $NoteOffObject.Channel = $Channel
+        $NoteOffObject.Port = $Port
+        $NoteOffQueue.Add($NoteOffObject)
+    }
+    else {
+        $InstrumentNoteToQueue = [PSCustomObject]@{
+            MidiNumber = $MidiNumber
             Channel  = $Channel
             Velocity = $Velocity
             Port     = $Port
-            DownTime = $DownTime
+            NoteLength = $NoteLength
         }
-
         $NoteOffQueue.Add($InstrumentNoteToQueue)
- 
-    
-
+    }
 }
 
 Function New-BSMidiOutputDevice {
@@ -406,36 +391,37 @@ Function Invoke-BSPlayStepNotes {
         $BassNotes,
         $SynthNotes
     )
-        # TODO THIS IS SLOW
-        # TODO - Send all notes at once and parse each note based on note type or pattern type
-        #$DebugTimer.Start()
-        
-        If($null -ne $DrumNotes -and "" -ne $DrumNotes)
-        {
-           #$DrumNotes
-            $DrumNotes | ForEach-Object {
-                Invoke-BSDrumShot -MidiNumber $_.MidiNumber -Velocity $_.Velocity
-            }
+    
+    $Global:DebugTimer.Start()
+    
+    #NOTE: all these $null -ne look dumb before the ForEAch but it's a notable performance boost..
+    If ($null -ne $DrumNotes -and "" -ne $DrumNotes) {  
+        #$DrumNotes
+           
+        $DrumNotes | ForEach-Object {
+            Invoke-BSPlayNoteOnOff -MidiNumber $_.MidiNumber -Velocity $_.Velocity -NoteLength $_.NoteLength -MidiChannel $Global:BSDrumMidiChannel -OutputPort $Global:BSDrumOutputPort -NoteOffObject $_.NoteOffObject
         }
-     
-        
-        If($null -ne $BassNotes -and "" -ne $BassNotes)
-        {
-            $BassNotes | ForEach-Object {
-                Invoke-BSPlayNoteOnOff -MidiNumber $_.MidiNumber -Velocity $_.Velocity -Instrument "bass" -Downtime $_.NoteLength
-            }
-        }
-        
-        If($null -ne $SynthNotes -and "" -ne $SynthNotes)
-        {
             
-            $SynthNotes | ForEach-Object {
-                Invoke-BSPlayNoteOnOff -MidiNumber $_.MidiNumber -Velocity $_.Velocity -Instrument "synth" -Downtime $_.NoteLength
-            }
+    }
+             
+    If ($null -ne $BassNotes -and "" -ne $BassNotes) {
+    
+        $BassNotes | ForEach-Object {
+            Invoke-BSPlayNoteOnOff -MidiNumber $_.MidiNumber -Velocity $_.Velocity -NoteLength $_.NoteLength -MidiChannel $Global:BSBassMidiChannel -OutputPort $Global:BSBassOutputPort -NoteOffObject $_.NoteOffObject
         }
 
-        #Write-Host $($DebugTimer.Elapsed.TotalMilliseconds)
-       # $DebugTimer.Reset()
+    }
+        
+    If ($null -ne $SynthNotes -and "" -ne $SynthNotes) {
+
+        $SynthNotes | ForEach-Object {
+            Invoke-BSPlayNoteOnOff -MidiNumber $_.MidiNumber -Velocity $_.Velocity -NoteLength $_.NoteLength -MidiChannel $Global:BSSynth1MidiChannel -OutputPort $Global:BSSynth1OutputPort -NoteOffObject $_.NoteOffObject
+        }
+       
+    }
+
+        
+    $Global:DebugTimer.Reset()
 
         
     
@@ -470,10 +456,10 @@ Function New-BSPattern {
     )
     
     return [PSCustomObject]@{
-        Name    = $Name
-        Instrument    = $Instrument.ToLower()
-        Pattern = $Notes
-        StepCount = $Notes.Count
+        Name       = $Name
+        Instrument = $Instrument.ToLower()
+        Pattern    = $Notes
+        StepCount  = $Notes.Count
     }
 
 }
@@ -510,16 +496,16 @@ Function New-BSSequencePattern {
 
     [int]$TotalPatternSteps = ($LastStep - $FirstStep) + 1
 
-    $LastStep | % {if($_ % 2 -ne 0 ) {Write-Warning "Last Step: $_ for: $($Pattern.Name) Should be an even number!"} }
-    $LastStep | % {if($_ % 4 -ne 0 ) {Write-Warning "Last Step: $_ for: $($Pattern.Name)should be divisible by 4!"} }
-    $FirstStep | % {if($_ % 2 -ne 1) {Write-Warning "First Step $_ for: $($Pattern.Name) Should be an ODD number!"} }
+    $LastStep | ForEach-Object { if ($_ % 2 -ne 0 ) { Write-Warning "Last Step: $_ for: $($Pattern.Name) Should be an even number!" } }
+    $LastStep | ForEach-Object { if ($_ % 4 -ne 0 ) { Write-Warning "Last Step: $_ for: $($Pattern.Name)should be divisible by 4!" } }
+    $FirstStep | ForEach-Object { if ($_ % 2 -ne 1) { Write-Warning "First Step $_ for: $($Pattern.Name) Should be an ODD number!" } }
     
-    {if($TotalPatternSteps%2 -eq 0) {Write-Warning ("Total Pattern Steps for $($Pattern.Name) should be an EVEN number - was $TotalPatternSteps!")}}
+    { if ($TotalPatternSteps%2 -eq 0) { Write-Warning ("Total Pattern Steps for $($Pattern.Name) should be an EVEN number - was $TotalPatternSteps!") } }
 
     return [PSCustomObject]@{
-        FirstStep  = $FirstStep
-        LastStep   = $LastStep
-        Pattern    = $Pattern
+        FirstStep = $FirstStep
+        LastStep  = $LastStep
+        Pattern   = $Pattern
     }
 
 }
@@ -577,44 +563,13 @@ function Set-BSActiveInstrument {
     }
 }
 
-Function New-BSDrumStep {
-    
-    param (
-        [Parameter(Position = 0, mandatory = $true)]
-        [ValidateSet("Kick", "Snare", "Clap", "ClosedHat", "OpenHat", "TomHigh", "TomLow", "Cymbal", "Cowbell", "FMDrum")]
-        $DrumNote,
-        $Velocity = 100
-    
-    )
-
-    #Arturia Drumbrute Impact Defaults
-    switch ($DrumNote) {
-        "Kick" { $MidiNumber = 36 }
-        "Snare" { $MidiNumber = 37 }
-        "Clap" { $MidiNumber = 38 }
-        "ClosedHat" { $MidiNumber = 43 }
-        "OpenHat" { $MidiNumber = 44 }
-        "TomHigh" { $MidiNumber = 39 }
-        "TomLow" { $MidiNumber = 40 }
-        "Cymbal" { $MidiNumber = 41 }
-        "Cowbell" { $MidiNumber = 42 }
-        "FMDrum" { $MidiNumber = 45 }
-    }    
-
-    return [PSCustomObject]@{
-        DrumNote   = $DrumNote
-        MidiNumber = $MidiNumber
-        Velocity   = $Velocity
-    }
-
-}
 
 Function New-BSStep {
     param (
         
 
         [Parameter(Position = 0)]
-        [ValidateSet("A0", "A#0", "B0", "C1", "C#1", "D1", "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1", "C2", "C#2", "D2", "D#2", "E2", "F2", "F#2", "G2", "G#2", "A2", "A#2", "B2", "C3", "C#3", "D3", "D#3", "E3", "F3", "F#3", "G3", "G#3", "A3", "A#3", "B3", "C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4", "C5", "C#5", "D5", "D#5", "E5", "F5", "F#5", "G5", "G#5", "A5", "A#5", "B5", "C6", "C#6", "D6", "D#6", "E6", "F6", "F#6", "G6", "G#6", "A6", "A#6", "B6", "C7", "C#7", "D7", "D#7", "E7", "F7", "F#7", "G7", "G#7", "A7", "A#7", "B7", "C8", "C#8", "D8", "D#8", "E8", "F8", "F#8", "G8", "G#8", "A8", "A#8", "B8", "C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9")]
+        [ValidateSet("A0", "A#0", "B0", "C1", "C#1", "D1", "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1", "C2", "C#2", "D2", "D#2", "E2", "F2", "F#2", "G2", "G#2", "A2", "A#2", "B2", "C3", "C#3", "D3", "D#3", "E3", "F3", "F#3", "G3", "G#3", "A3", "A#3", "B3", "C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4", "C5", "C#5", "D5", "D#5", "E5", "F5", "F#5", "G5", "G#5", "A5", "A#5", "B5", "C6", "C#6", "D6", "D#6", "E6", "F6", "F#6", "G6", "G#6", "A6", "A#6", "B6", "C7", "C#7", "D7", "D#7", "E7", "F7", "F#7", "G7", "G#7", "A7", "A#7", "B7", "C8", "C#8", "D8", "D#8", "E8", "F8", "F#8", "G8", "G#8", "A8", "A#8", "B8", "C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9", "Kick", "Snare", "Clap", "ClosedHat", "OpenHat", "TomHigh", "TomLow", "Cymbal", "Cowbell", "FMDrum")]
         $MusicNote,
 
         [Parameter(Position = 1)]
@@ -625,8 +580,15 @@ Function New-BSStep {
         $Velocity = 100,
 
         [Parameter(Position = 3)]
-        $NoteLength = 15
+        $NoteLength = 20
+        
     )
+
+    #Todo Drum Hits don't need lengths... is this really true though?
+    if("Kick", "Snare", "Clap", "ClosedHat", "OpenHat", "TomHigh", "TomLow", "Cymbal", "Cowbell", "FMDrum" -contains $MusicNote)
+    {
+        $NoteLength = 0
+    }
 
     if ($null -ne $MusicNote -and $null -eq $MidiNumber) {
         switch ($MusicNote) {
@@ -737,179 +699,152 @@ Function New-BSStep {
             "F9" { $MidiNumber = 125 }
             "F#9" { $MidiNumber = 126 }
             "G9" { $MidiNumber = 127 }
+            "Kick" { $MidiNumber = 36 } # TODO Arturia Drumbrute Defaults - need to set via cmdlet
+            "Snare" { $MidiNumber = 37 }
+            "Clap" { $MidiNumber = 38 }
+            "ClosedHat" { $MidiNumber = 43 }
+            "OpenHat" { $MidiNumber = 44 }
+            "TomHigh" { $MidiNumber = 39 }
+            "TomLow" { $MidiNumber = 40 }
+            "Cymbal" { $MidiNumber = 41 }
+            "Cowbell" { $MidiNumber = 42 }
+            "FMDrum" { $MidiNumber = 45 }
         }
     }
 
     if ($null -ne $MidiNumber -and $null -eq $MusicNote) {
         switch ($MidiNumber) {
-            21 { $MusicNote = "A0"}
-            22 { $MusicNote = "A#0"}
-            23 { $MusicNote = "B0"}
-            24 { $MusicNote = "C1"}
-            25 { $MusicNote = "C#1"}
-            26 { $MusicNote = "D1"}
-            27 { $MusicNote = "D#1"}
-            28 { $MusicNote = "E1"}
-            29 { $MusicNote = "F1"}
-            30 { $MusicNote = "F#1"}
-            31 { $MusicNote = "G1"}
-            32 { $MusicNote = "G#1"}
-            33 { $MusicNote = "A1"}
-            34 { $MusicNote = "A#1"}
-            35 { $MusicNote = "B1"}
-            36 { $MusicNote = "C2"}
-            37 { $MusicNote = "C#2"}
-            38 { $MusicNote = "D2"}
-            39 { $MusicNote = "D#2"}
-            40 { $MusicNote = "E2"}
-            41 { $MusicNote = "F2"}
-            42 { $MusicNote = "F#2"}
-            43 { $MusicNote = "G2"}
-            44 { $MusicNote = "G#2"}
-            45 { $MusicNote = "A2"}
-            46 { $MusicNote = "A#2"}
-            47 { $MusicNote = "B2"}
-            48 { $MusicNote = "C3"}
-            49 { $MusicNote = "C#3"}
-            50 { $MusicNote = "D3"}
-            51 { $MusicNote = "D#3"}
-            52 { $MusicNote = "E3"}
-            53 { $MusicNote = "F3"}
-            54 { $MusicNote = "F#3"}
-            55 { $MusicNote = "G3"}
-            56 { $MusicNote = "G#3"}
-            57 { $MusicNote = "A3"}
-            58 { $MusicNote = "A#3"}
-            59 { $MusicNote = "B3"}
-            60 { $MusicNote = "C4"}
-            61 { $MusicNote = "C#4"}
-            62 { $MusicNote = "D4"}
-            63 { $MusicNote = "D#4"}
-            64 { $MusicNote = "E4"}
-            65 { $MusicNote = "F4"}
-            66 { $MusicNote = "F#4"}
-            67 { $MusicNote = "G4"}
-            68 { $MusicNote = "G#4"}
-            69 { $MusicNote = "A4"}
-            70 { $MusicNote = "A#4"}
-            71 { $MusicNote = "B4"}
-            72 { $MusicNote = "C5"}
-            73 { $MusicNote = "C#5"}
-            74 { $MusicNote = "D5"}
-            75 { $MusicNote = "D#5"}
-            76 { $MusicNote = "E5"}
-            77 { $MusicNote = "F5"}
-            78 { $MusicNote = "F#5"}
-            79 { $MusicNote = "G5"}
-            80 { $MusicNote = "G#5"}
-            81 { $MusicNote = "A5"}
-            82 { $MusicNote = "A#5"}
-            83 { $MusicNote = "B5"}
-            84 { $MusicNote = "C6"}
-            85 { $MusicNote = "C#6"}
-            86 { $MusicNote = "D6"}
-            87 { $MusicNote = "D#6"}
-            88 { $MusicNote = "E6"}
-            89 { $MusicNote = "F6"}
-            90 { $MusicNote = "F#6"}
-            91 { $MusicNote = "G6"}
-            92 { $MusicNote = "G#6"}
-            93 { $MusicNote = "A6"}
-            94 { $MusicNote = "A#6"}
-            95 { $MusicNote = "B6"}
-            96 { $MusicNote = "C7"}
-            97 { $MusicNote = "C#7"}
-            98 { $MusicNote = "D7"}
-            99 { $MusicNote = "D#7"}
-            100 { $MusicNote = "E7"}
-            101 { $MusicNote = "F7"}
-            102 { $MusicNote = "F#7"}
-            103 { $MusicNote = "G7"}
-            104 { $MusicNote = "G#7"}
-            105 { $MusicNote = "A7"}
-            106 { $MusicNote = "A#7"}
-            107 { $MusicNote = "B7"}
-            108 { $MusicNote = "C8"}
-            109 { $MusicNote = "C#8"}
-            110 { $MusicNote = "D8"}
-            111 { $MusicNote = "D#8"}
-            112 { $MusicNote = "E8"}
-            113 { $MusicNote = "F8"}
-            114 { $MusicNote = "F#8"}
-            115 { $MusicNote = "G8"}
-            116 { $MusicNote = "G#8"}
-            117 { $MusicNote = "A8"}
-            118 { $MusicNote = "A#8"}
-            119 { $MusicNote = "B8"}
-            120 { $MusicNote = "C9"}
-            121 { $MusicNote = "C#9"}
-            122 { $MusicNote = "D9"}
-            123 { $MusicNote = "D#9"}
-            124 { $MusicNote = "E9"}
-            125 { $MusicNote = "F9"}
-            126 { $MusicNote = "F#9"}
-            127 { $MusicNote = "G9"}
+            21 { $MusicNote = "A0" }
+            22 { $MusicNote = "A#0" }
+            23 { $MusicNote = "B0" }
+            24 { $MusicNote = "C1" }
+            25 { $MusicNote = "C#1" }
+            26 { $MusicNote = "D1" }
+            27 { $MusicNote = "D#1" }
+            28 { $MusicNote = "E1" }
+            29 { $MusicNote = "F1" }
+            30 { $MusicNote = "F#1" }
+            31 { $MusicNote = "G1" }
+            32 { $MusicNote = "G#1" }
+            33 { $MusicNote = "A1" }
+            34 { $MusicNote = "A#1" }
+            35 { $MusicNote = "B1" }
+            36 { $MusicNote = "C2" }
+            37 { $MusicNote = "C#2" }
+            38 { $MusicNote = "D2" }
+            39 { $MusicNote = "D#2" }
+            40 { $MusicNote = "E2" }
+            41 { $MusicNote = "F2" }
+            42 { $MusicNote = "F#2" }
+            43 { $MusicNote = "G2" }
+            44 { $MusicNote = "G#2" }
+            45 { $MusicNote = "A2" }
+            46 { $MusicNote = "A#2" }
+            47 { $MusicNote = "B2" }
+            48 { $MusicNote = "C3" }
+            49 { $MusicNote = "C#3" }
+            50 { $MusicNote = "D3" }
+            51 { $MusicNote = "D#3" }
+            52 { $MusicNote = "E3" }
+            53 { $MusicNote = "F3" }
+            54 { $MusicNote = "F#3" }
+            55 { $MusicNote = "G3" }
+            56 { $MusicNote = "G#3" }
+            57 { $MusicNote = "A3" }
+            58 { $MusicNote = "A#3" }
+            59 { $MusicNote = "B3" }
+            60 { $MusicNote = "C4" }
+            61 { $MusicNote = "C#4" }
+            62 { $MusicNote = "D4" }
+            63 { $MusicNote = "D#4" }
+            64 { $MusicNote = "E4" }
+            65 { $MusicNote = "F4" }
+            66 { $MusicNote = "F#4" }
+            67 { $MusicNote = "G4" }
+            68 { $MusicNote = "G#4" }
+            69 { $MusicNote = "A4" }
+            70 { $MusicNote = "A#4" }
+            71 { $MusicNote = "B4" }
+            72 { $MusicNote = "C5" }
+            73 { $MusicNote = "C#5" }
+            74 { $MusicNote = "D5" }
+            75 { $MusicNote = "D#5" }
+            76 { $MusicNote = "E5" }
+            77 { $MusicNote = "F5" }
+            78 { $MusicNote = "F#5" }
+            79 { $MusicNote = "G5" }
+            80 { $MusicNote = "G#5" }
+            81 { $MusicNote = "A5" }
+            82 { $MusicNote = "A#5" }
+            83 { $MusicNote = "B5" }
+            84 { $MusicNote = "C6" }
+            85 { $MusicNote = "C#6" }
+            86 { $MusicNote = "D6" }
+            87 { $MusicNote = "D#6" }
+            88 { $MusicNote = "E6" }
+            89 { $MusicNote = "F6" }
+            90 { $MusicNote = "F#6" }
+            91 { $MusicNote = "G6" }
+            92 { $MusicNote = "G#6" }
+            93 { $MusicNote = "A6" }
+            94 { $MusicNote = "A#6" }
+            95 { $MusicNote = "B6" }
+            96 { $MusicNote = "C7" }
+            97 { $MusicNote = "C#7" }
+            98 { $MusicNote = "D7" }
+            99 { $MusicNote = "D#7" }
+            100 { $MusicNote = "E7" }
+            101 { $MusicNote = "F7" }
+            102 { $MusicNote = "F#7" }
+            103 { $MusicNote = "G7" }
+            104 { $MusicNote = "G#7" }
+            105 { $MusicNote = "A7" }
+            106 { $MusicNote = "A#7" }
+            107 { $MusicNote = "B7" }
+            108 { $MusicNote = "C8" }
+            109 { $MusicNote = "C#8" }
+            110 { $MusicNote = "D8" }
+            111 { $MusicNote = "D#8" }
+            112 { $MusicNote = "E8" }
+            113 { $MusicNote = "F8" }
+            114 { $MusicNote = "F#8" }
+            115 { $MusicNote = "G8" }
+            116 { $MusicNote = "G#8" }
+            117 { $MusicNote = "A8" }
+            118 { $MusicNote = "A#8" }
+            119 { $MusicNote = "B8" }
+            120 { $MusicNote = "C9" }
+            121 { $MusicNote = "C#9" }
+            122 { $MusicNote = "D9" }
+            123 { $MusicNote = "D#9" }
+            124 { $MusicNote = "E9" }
+            125 { $MusicNote = "F9" }
+            126 { $MusicNote = "F#9" }
+            127 { $MusicNote = "G9" }
         }
     }
 
+
+    $InstrumentNoteOffQueueObject = [PSCustomObject]@{ 
+        MidiNumber = $MidiNumber
+        Velocity = $Velocity
+        NoteLength = $NoteLength
+        Channel  = $null
+        Port     = $null
+    }
+    
+    
     return [PSCustomObject]@{
         MusicNote  = $MusicNote
         MidiNumber = $MidiNumber
         Velocity   = $Velocity
         NoteLength = $NoteLength
+        NoteOffObject = $InstrumentNoteOffQueueObject
     }
 }
 
 
-Function Invoke-BSTestDrums
-{
-    Invoke-BSDrumShot -MidiNumber 36 -Velocity 100
 
-}
-
-Function Invoke-BSTestInstrument
-{
-    param (
-        $Instrument
-    )
-
-    if($Null -ne $Instrument.Name)
-    {
-        Invoke-BSPlayNoteOnOff -MidiNumber 45 -Velocity 100 -Downtime 5 -Instrument $Instrument.Name.ToLower() 
-    }
-    else {
-        Invoke-BSPlayNoteOnOff -MidiNumber 45 -Velocity 100 -Downtime 5 -Instrument $Instrument 
-    }
-    
-
-}
-
-
-Function Invoke-BSTestBSStep{
-    
-    param (
-        $Step,
-        $Instrument
-    )
-    
-    $Step = (New-BSStep -MidiNumber "84" -Velocity 100 -NoteLength 1000)
-   
-   
-    Invoke-BSPlayNoteOnOff -MidiNumber $Step.MidiNumber -Velocity $Step.Velocity -Downtime $Step.NoteLength -Instrument "Synth"
-    Start-Sleep -Milliseconds 968
-    Invoke-BSPlayNoteOnOff -MidiNumber 83 -Velocity $Step.Velocity -Downtime 100 -Instrument "Synth"
-    Start-Sleep -Milliseconds 500
-    Invoke-BSPlayNoteOnOff -MidiNumber 77 -Velocity $Step.Velocity -Downtime 2444 -Instrument "Synth"
-    Start-Sleep -Milliseconds 2444
-    Invoke-BSPlayNoteOnOff -MidiNumber $Step.MidiNumber -Velocity $Step.Velocity -Downtime $Step.NoteLength -Instrument "Synth"
-    Start-Sleep -Seconds 1
-    Invoke-BSPlayNoteOnOff -MidiNumber 83 -Velocity $Step.Velocity -Downtime 100 -Instrument "Synth"
-    Start-Sleep -Milliseconds 500
-    Invoke-BSPlayNoteOnOff -MidiNumber 81 -Velocity $Step.Velocity -Downtime 500 -Instrument "Synth"
-    Start-Sleep -Milliseconds 800
-    Invoke-BSPlayNoteOnOff -MidiNumber 88 -Velocity $Step.Velocity -Downtime 1500 -Instrument "Synth"
-    
-}
 
 #Fine Art Starts here
 $Art1 = "
