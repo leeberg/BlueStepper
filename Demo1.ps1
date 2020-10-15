@@ -18,11 +18,14 @@ Set-BSActiveInstrument -Instrument $DrumMachine
 Set-BSActiveInstrument -Instrument $SynthBass
 Set-BSActiveInstrument -Instrument $SynthLead
 
+
+#Send-MidiNoteOnMessage -Note 36 -Velocity 100 -Channel 9 -Port $DrumMachine.MidiOutput.OutputPort
+
 # Utility
 Set-BSSequencerDebugMode -EnableDebug $true 
 
 # Load Song
-$Song2 = .\Songs\BlueMonday.ps1
+$Song = .\Songs\BlueMonday.ps1
 
 # Let's Play 
-Invoke-BSPlayBack -Song $Song2 -StartStep 1
+Invoke-BSPlayBack -Song $Song -StartStep 1

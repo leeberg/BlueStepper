@@ -1,3 +1,6 @@
+
+
+
 Function Invoke-BSPlayBack {
     param (
         $Song,
@@ -8,12 +11,40 @@ Function Invoke-BSPlayBack {
     )
 
     #Defaults   # todo - make this a Seqeuncer Settings PS Function
-    $Global:BPM = 120
-    $Global:ArpPattern = "UP_1"
-    $Global:DebugTimer = New-Object System.Diagnostics.Stopwatch
-    $StepStopWatch = New-Object System.Diagnostics.Stopwatch
+    $Global:BPM = 120   
 
-    $CurrentPlayBackStep = $StartStep
+    # 4 Steps in a Beat
+    # 120 BPM = 480 Steps a Minute
+    # 480 Steps a minute = 480 Steps per 60000 MS
+    # 60000 MS / 480 = 125MS STEP WAIT INTERVAL
+
+    # MSPERMIN / 4/4 Time Sig
+    $Global:StepInterval = 60000 / ($BPM * 4)
+
+    # 1 step interval at 120 bpm
+    $Date = Get-Date
+    $DateResolution = $Date.AddMilliseconds(1)
+    $DateInterval = $Date.AddMilliseconds($Global:StepInterval)  # BPM
+
+    [System.Reflection.Assembly]::LoadFile("C:\Users\lee\.nuget\packages\multimediatimer\1.0.1\lib\netcoreapp3.1\MultimediaTimer.dll")
+
+    $StepTimer = New-Object MultimediaTimer.Timer
+
+    $global:CurrentPlayBackStep = 1
+    $lastStep = 0
+
+    $StepTimer.Interval = New-TimeSpan -Start $Date -End $DateInterval
+    $StepTimer.Resolution = New-TimeSpan -Start $Date -End $DateResolution
+    
+    #Create the event subscription
+    Register-ObjectEvent -InputObject $StepTimer -EventName Elapsed -SourceIdentifier Timer.Output -Action {
+        $Global:CurrentPlayBackStep++
+    }
+    
+
+    $Global:ArpPattern = "UP_1"
+
+    $Global:CurrentPlayBackStep = $StartStep
     $CurrentDrumPattern_Step = 1
     $CurrentBassPattern_Step = 1
     $CurrentSynthPattern_Step = 1
@@ -65,86 +96,94 @@ Function Invoke-BSPlayBack {
     # Setup Note Operation Runspaces
     Invoke-BSSetupBlockingCollections
     
-    # Start Step Timer
-    $StepStopWatch.Start()
-    $Global:DebugTimer.Start()
+    $StepTimer.Start()
 
     Do {
         #WE ARE LIVE 
+
         # Play the Notes
         # Then Afterwards do all the cleanup Sequence the next set
+ 
+        if($lastStep -ne $global:CurrentPlayBackStep )
+        {
+            # NEW STEP TO PROCESS
+            $lastStep = $global:CurrentPlayBackStep
         
-        Invoke-BSPlayStepNotes -DrumNotes $DrumStepNotesToPlay -BassNotes $BassStepNotesToPlay -SynthNotes $SynthStepNotesToPlay
+            #DRUMS
+            
+            Invoke-BSPlayStepNotes -DrumNotes $DrumStepNotesToPlay -BassNotes $BassStepNotesToPlay -SynthNotes $SynthStepNotesToPlay
 
-        $PlayTime = $StepStopWatch.Elapsed.TotalMilliseconds
-        #Done Playing
-        #Increment all Steps to NEXT Step
+            if ($Global:BSDebugMode -eq $true) {
+                $Message = "STEP: " + ($Global:CurrentPlayBackStep) + " - " 
+                if($null -ne $DrumStepNotesToPlay.MusicNote){$Message += "Drum: " + ($DrumStepNotesToPlay.MusicNote) + " - "}   
+                if($null -ne $BassStepNotesToPlay.MusicNote){$Message += "Bass: " + ($BassStepNotesToPlay.MusicNote) + " - " }   
+                if($null -ne $SynthStepNotesToPlay.MusicNote){$Message += "Synth: " + ($SynthStepNotesToPlay.MusicNote) }  
+                Write-Host $Message
+            }
 
-        $CurrentDrumPattern_Step ++
-        $CurrentBassPattern_Step ++
-        $CurrentSynthPattern_Step ++
-        $CurrentPlayBackStep++
 
-        if ($CurrentDrumPattern_Step -gt $CurrentDrumPattern.Pattern.Pattern.Count) {
-            #Reset to Step 1 in the Pattern if at the end of the pattern
-            $CurrentDrumPattern_Step = 1
-        }
-        if ($CurrentBassPattern_Step -gt $CurrentBassPattern.Pattern.Pattern.Count) {
-            #Reset to Step 1 in the Pattern if at the end of the pattern
-            $CurrentBassPattern_Step = 1
-        }
-        if ($CurrentSynthPattern_Step -gt $CurrentSynthPattern.Pattern.Pattern.Count) {
-            #Reset to Step 1 in the Pattern if at the end of the pattern
-            $CurrentSynthPattern_Step = 1
-        }
+            $CurrentDrumPattern_Step ++
+            $CurrentBassPattern_Step ++
+            $CurrentSynthPattern_Step ++
+
+            if ($CurrentDrumPattern_Step -gt $CurrentDrumPattern.Pattern.Pattern.Count) {
+                #Reset to Step 1 in the Pattern if at the end of the pattern
+                $CurrentDrumPattern_Step = 1
+            }
+            if ($CurrentBassPattern_Step -gt $CurrentBassPattern.Pattern.Pattern.Count) {
+                #Reset to Step 1 in the Pattern if at the end of the pattern
+                $CurrentBassPattern_Step = 1
+            }
+            if ($CurrentSynthPattern_Step -gt $CurrentSynthPattern.Pattern.Pattern.Count) {
+                #Reset to Step 1 in the Pattern if at the end of the pattern
+                $CurrentSynthPattern_Step = 1
+            }
+            
+            #Change Drum Pattern
+            $CurrentDrumPattern = $DrumSequences | Where { (($Global:CurrentPlayBackStep) -ge $_.FirstStep) -and (($Global:CurrentPlayBackStep) -le $_.LastStep) }
+            #Change Bass Pattern
+            $CurrentBassPattern = $BassSequences | Where { (($Global:CurrentPlayBackStep) -ge $_.FirstStep) -and (($Global:CurrentPlayBackStep) -le $_.LastStep) }
+            #Change Synth Pattern
+            $CurrentSynthPattern = $SynthSequences | Where { (($Global:CurrentPlayBackStep) -ge $_.FirstStep) -and (($Global:CurrentPlayBackStep) -le $_.LastStep) }
         
+            if ($null -ne $CurrentDrumPattern) {
+                $DrumStepNotesToPlay = $CurrentDrumPattern.Pattern.Pattern[$CurrentDrumPattern_Step]
+            }
+            else {
+                $DrumStepNotesToPlay = $null
+            }
+            if ($null -ne $CurrentBassPattern) {
+                $BassStepNotesToPlay = $CurrentBassPattern.Pattern.Pattern[$CurrentBassPattern_Step]
+            }
+            else {
+                $BassStepNotesToPlay = $null
+            }
+            if ($null -ne $CurrentSynthPattern) {
+                $SynthStepNotesToPlay = $CurrentSynthPattern.Pattern.Pattern[$CurrentSynthPattern_Step]
+            }
+            else {
+                $SynthStepNotesToPlay = $null
+            }
+            
+            
+
         
-        #Change Drum Pattern
-        $CurrentDrumPattern = $DrumSequences | Where { (($CurrentPlayBackStep) -ge $_.FirstStep) -and (($CurrentPlayBackStep) -le $_.LastStep) }
-        #Change Bass Pattern
-        $CurrentBassPattern = $BassSequences | Where { (($CurrentPlayBackStep) -ge $_.FirstStep) -and (($CurrentPlayBackStep) -le $_.LastStep) }
-        #Change Synth Pattern
-        $CurrentSynthPattern = $SynthSequences | Where { (($CurrentPlayBackStep) -ge $_.FirstStep) -and (($CurrentPlayBackStep) -le $_.LastStep) }
-    
-        if ($null -ne $CurrentDrumPattern) {
-            $DrumStepNotesToPlay = $CurrentDrumPattern.Pattern.Pattern[$CurrentDrumPattern_Step]
-        }
-        else {
-            $DrumStepNotesToPlay = $null
-        }
-        if ($null -ne $CurrentBassPattern) {
-            $BassStepNotesToPlay = $CurrentBassPattern.Pattern.Pattern[$CurrentBassPattern_Step]
-        }
-        else {
-            $BassStepNotesToPlay = $null
-        }
-        if ($null -ne $CurrentSynthPattern) {
-            $SynthStepNotesToPlay = $CurrentSynthPattern.Pattern.Pattern[$CurrentSynthPattern_Step]
-        }
-        else {
-            $SynthStepNotesToPlay = $null
-        }
-        
-        # STOP TIMER
-        $SeqTime = $StepStopWatch.Elapsed.TotalMilliseconds
-        $PlayBackTimingReport.Add($CurrentPlayBackStep, $SeqTime)
-        $StepWaitUntilNextTimeMs = ($Global:TimePerStep - $SeqTime) 
-        
-        if ($Global:BSDebugMode -eq $true) {
-            $Message = "STEP: " + ($CurrentPlayBackStep - 1) + " - "
-            $Message += "PlayTime " + $PlayTime + "ms Sequencing - " + ($SeqTime - $PlayTime) + "ms - Total: " + $SeqTime + "ms"
-            Write-Host $Message
         }
 
-        [System.Threading.Thread]::Sleep($StepWaitUntilNextTimeMs)
-        $StepStopWatch.Restart() #Stops time interval measurement, resets the elapsed time to zero, and starts measuring elapsed time.
-        
-
-    } While ($TotalStepsToPlay -ge $CurrentPlayBackStep)
+    } While ($TotalStepsToPlay -ge $Global:CurrentPlayBackStep)
 
     Write-Host "Playback Completed" -ForegroundColor Cyan
-    $StepStopWatch.Stop()
-    $Global:DebugTimer.Stop()
+  
+    Try{
+        $StepTimer.Stop()
+        Unregister-Event -SourceIdentifier Timer.Output 
+    }
+    Catch
+    {
+        Write-Host "Couldn't Stop Some timers"
+    }
+    
+
     
     # Close RunSpaces
     Foreach ($Runspace in $Global:NoteRunspaces) {
@@ -175,7 +214,7 @@ function Invoke-BSPlayNoteOnOff {
         #### Queue Note Off
         if ($NoteLength -ne 0) {
             # TODO - NEed to pass in QUEUE TIME SO Note off can compare note time to current
-            Invoke-BSQueueNoteOff -MidiNumber $MidiNumber -Channel $MidiChannel -Velocity $Velocity -Port $OutputPort -NoteLength $NoteLength -NoteOffObject $NoteOffObject
+                  Invoke-BSQueueNoteOff -MidiNumber $MidiNumber -Channel $MidiChannel -Velocity $Velocity -Port $OutputPort -NoteLength $NoteLength -NoteOffObject $NoteOffObject
         }
         
         $MidiNumber = $null
@@ -194,6 +233,25 @@ function Set-BSTiming {
     )
     
     $Global:BPM = $BPM
+
+    # 120 BPM is 
+
+    #16th Steps - in 4/4 is 
+
+    # 1 Second = 2 Beats and 8 steps
+
+    # 4/4  - is 4 beats in a bar
+    # my BAR has 16 Steps
+
+
+    # 4 Steps in a Beat
+    # 120 BPM = 480 Steps a Minute
+    # 480 Steps a minute = 480 Steps per 60000 MS
+    # 60000 MS / 480 = 125MS STEP WAIT INTERVAL
+
+    # MSPERMIN / 4/4 Time Sig
+    $Global:StepInterval = 60000 / ($Global:BPM * 4)
+
     
     # Timing Calculations
     $Global:TotalStepsPerMinute = $Global:BPM * 4 # we could do something other than 4/4 time signature but nahhh
