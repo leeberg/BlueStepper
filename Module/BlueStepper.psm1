@@ -187,7 +187,7 @@ Function Invoke-BSPlayBack {
     Write-Host "Playback Completed" -ForegroundColor Cyan
       
     $StepTimer.Stop()
-    Unregister-Event -SourceIdentifier Timer.Output -ErrorAction 
+    Unregister-Event -SourceIdentifier Timer.Output -ErrorAction Ignore
     
     # Close RunSpaces
     Foreach ($Runspace in $Global:NoteRunspaces) {
