@@ -11,7 +11,7 @@ Function Invoke-BSPlayBack {
     )
 
     #Defaults   # todo - make this a Seqeuncer Settings PS Function
-    $Global:BPM = 120   
+    $Global:BPM = $Song.BPM
 
     # 4 Steps in a Beat
     # 120 BPM = 480 Steps a Minute
@@ -26,8 +26,6 @@ Function Invoke-BSPlayBack {
     $DateResolution = $Date.AddMilliseconds(1)
     $DateInterval = $Date.AddMilliseconds($Global:StepInterval)  # BPM
 
-    [System.Reflection.Assembly]::LoadFile("C:\Users\lee\.nuget\packages\multimediatimer\1.0.1\lib\netcoreapp3.1\MultimediaTimer.dll")
-
     $StepTimer = New-Object MultimediaTimer.Timer
 
     $global:CurrentPlayBackStep = 1
@@ -35,7 +33,9 @@ Function Invoke-BSPlayBack {
 
     $StepTimer.Interval = New-TimeSpan -Start $Date -End $DateInterval
     $StepTimer.Resolution = New-TimeSpan -Start $Date -End $DateResolution
-    
+
+    Unregister-Event -SourceIdentifier Timer.Output -ErrorAction Ignore
+
     #Create the event subscription
     Register-ObjectEvent -InputObject $StepTimer -EventName Elapsed -SourceIdentifier Timer.Output -Action {
         $Global:CurrentPlayBackStep++
@@ -96,6 +96,8 @@ Function Invoke-BSPlayBack {
     # Setup Note Operation Runspaces
     Invoke-BSSetupBlockingCollections
     
+    Start-Sleep -Seconds 1.5
+
     $StepTimer.Start()
 
     Do {
@@ -106,38 +108,6 @@ Function Invoke-BSPlayBack {
  
         if($lastStep -ne $global:CurrentPlayBackStep )
         {
-            # NEW STEP TO PROCESS
-            $lastStep = $global:CurrentPlayBackStep
-        
-            #DRUMS
-            
-            Invoke-BSPlayStepNotes -DrumNotes $DrumStepNotesToPlay -BassNotes $BassStepNotesToPlay -SynthNotes $SynthStepNotesToPlay
-
-            if ($Global:BSDebugMode -eq $true) {
-                $Message = "STEP: " + ($Global:CurrentPlayBackStep) + " - " 
-                if($null -ne $DrumStepNotesToPlay.MusicNote){$Message += "Drum: " + ($DrumStepNotesToPlay.MusicNote) + " - "}   
-                if($null -ne $BassStepNotesToPlay.MusicNote){$Message += "Bass: " + ($BassStepNotesToPlay.MusicNote) + " - " }   
-                if($null -ne $SynthStepNotesToPlay.MusicNote){$Message += "Synth: " + ($SynthStepNotesToPlay.MusicNote) }  
-                Write-Host $Message
-            }
-
-
-            $CurrentDrumPattern_Step ++
-            $CurrentBassPattern_Step ++
-            $CurrentSynthPattern_Step ++
-
-            if ($CurrentDrumPattern_Step -gt $CurrentDrumPattern.Pattern.Pattern.Count) {
-                #Reset to Step 1 in the Pattern if at the end of the pattern
-                $CurrentDrumPattern_Step = 1
-            }
-            if ($CurrentBassPattern_Step -gt $CurrentBassPattern.Pattern.Pattern.Count) {
-                #Reset to Step 1 in the Pattern if at the end of the pattern
-                $CurrentBassPattern_Step = 1
-            }
-            if ($CurrentSynthPattern_Step -gt $CurrentSynthPattern.Pattern.Pattern.Count) {
-                #Reset to Step 1 in the Pattern if at the end of the pattern
-                $CurrentSynthPattern_Step = 1
-            }
             
             #Change Drum Pattern
             $CurrentDrumPattern = $DrumSequences | Where { (($Global:CurrentPlayBackStep) -ge $_.FirstStep) -and (($Global:CurrentPlayBackStep) -le $_.LastStep) }
@@ -164,26 +134,60 @@ Function Invoke-BSPlayBack {
             else {
                 $SynthStepNotesToPlay = $null
             }
+
+            if ($Global:BSDebugMode -eq $true) {
+                $Message = "STEP: " + ($Global:CurrentPlayBackStep) + " - " 
+                if($null -ne $DrumStepNotesToPlay.MusicNote){$Message += "Drum: " + ($DrumStepNotesToPlay.MusicNote) + " - "}   
+                if($null -ne $BassStepNotesToPlay.MusicNote){$Message += "Bass: " + ($BassStepNotesToPlay.MusicNote) + " - " }   
+                if($null -ne $SynthStepNotesToPlay.MusicNote){$Message += "Synth: " + ($SynthStepNotesToPlay.MusicNote) }  
+                Write-Host $Message
+            }
+
+            # NEW STEP TO PROCESS
+            $lastStep = $global:CurrentPlayBackStep
+        
+            #DRUMS
+            
+            Invoke-BSPlayStepNotes -DrumNotes $DrumStepNotesToPlay -BassNotes $BassStepNotesToPlay -SynthNotes $SynthStepNotesToPlay
+
+           
+
+            if ($null -ne $CurrentDrumPattern) {
+                $CurrentDrumPattern_Step ++
+            }
+            if ($null -ne $CurrentBassPattern) {
+                $CurrentBassPattern_Step ++
+            }
+            if ($null -ne $CurrentSynthPattern) {
+                $CurrentSynthPattern_Step ++
+            }
+
+                   
+
+            if ($CurrentDrumPattern_Step -gt $CurrentDrumPattern.Pattern.Pattern.Count) {
+                #Reset to Step 1 in the Pattern if at the end of the pattern
+                $CurrentDrumPattern_Step = 1
+            }
+            if ($CurrentBassPattern_Step -gt $CurrentBassPattern.Pattern.Pattern.Count) {
+                #Reset to Step 1 in the Pattern if at the end of the pattern
+                $CurrentBassPattern_Step = 1
+            }
+            if ($CurrentSynthPattern_Step -gt $CurrentSynthPattern.Pattern.Pattern.Count) {
+                #Reset to Step 1 in the Pattern if at the end of the pattern
+                $CurrentSynthPattern_Step = 1
+            }
             
             
 
         
         }
 
-    } While ($TotalStepsToPlay -ge $Global:CurrentPlayBackStep)
+    } While ($TotalStepsToPlay -gt $Global:CurrentPlayBackStep)
 
     Write-Host "Playback Completed" -ForegroundColor Cyan
-  
-    Try{
-        $StepTimer.Stop()
-        Unregister-Event -SourceIdentifier Timer.Output 
-    }
-    Catch
-    {
-        Write-Host "Couldn't Stop Some timers"
-    }
-    
-
+      
+    $StepTimer.Stop()
+    Unregister-Event -SourceIdentifier Timer.Output -ErrorAction 
     
     # Close RunSpaces
     Foreach ($Runspace in $Global:NoteRunspaces) {
@@ -450,7 +454,6 @@ Function Invoke-BSPlayStepNotes {
         $SynthNotes
     )
     
-    $Global:DebugTimer.Start()
     
     #NOTE: all these $null -ne look dumb before the ForEAch but it's a notable performance boost..
     If ($null -ne $DrumNotes -and "" -ne $DrumNotes) {  
@@ -478,8 +481,7 @@ Function Invoke-BSPlayStepNotes {
        
     }
 
-        
-    $Global:DebugTimer.Reset()
+
 
         
     

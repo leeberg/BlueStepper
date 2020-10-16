@@ -2,6 +2,9 @@
 Import-Module "C:\Users\lee\Windows-10-PowerShell-MIDI\PeteBrown.PowerShellMidi\bin\Debug\PeteBrown.PowerShellMidi.dll" -Force
 Import-Module "C:\Users\lee\BlueStepper\Module\BlueStepper.psd1" -Force
 
+# MikeCodesDotNET - Multimedia-Timer - https://github.com/MikeCodesDotNET/Multimedia-Timer
+$Assembly = [System.Reflection.Assembly]::LoadFile("C:\Users\lee\.nuget\packages\multimediatimer\1.0.1\lib\netcoreapp3.1\MultimediaTimer.dll")
+
 # Setup Midi Interface Device Outputs
 $Win10Midi = New-BSMidiOutputDevice -DeviceID "\\?\SWD#MMDEVAPI#MicrosoftGSWavetableSynth#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}"
 $TX1 = New-BSMidiOutputDevice -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0000#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}"
@@ -25,7 +28,7 @@ Set-BSActiveInstrument -Instrument $SynthLead
 Set-BSSequencerDebugMode -EnableDebug $true 
 
 # Load Song
-$Song = .\Songs\BlueMonday.ps1
+$Song = .\Songs\Robots.ps1
 
 # Let's Play 
 Invoke-BSPlayBack -Song $Song -StartStep 1

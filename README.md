@@ -24,9 +24,11 @@ Each "Step" is simply an "Step" PSObject  in a PowerShell [Hasthtable](https://d
 
 This module uses [Psychlist1972's PowerShell MIDI Module](https://github.com/Psychlist1972/Windows-10-PowerShell-MIDI) for all MIDI Operations, which uses the [multi-client MIDI API for Windows 10](https://blogs.windows.com/windowsdeveloper/2016/09/21/midi-enhancements-in-windows-10/). Therefore BlueStepper is **only compatible with Windows 10**.
 
+This module also uses [MikeCodesDotNET's Multimedia-Timer Wrapper](https://github.com/Psychlist1972/Windows-10-PowerShell-MIDI) for Precise (1ms) Scheduling. This allows Timer Ticks for STEPs based on Song BPM to trigger the appropriate midi actions.
+
 In **Play mode**, the hashtable patterns are iterated through in time to the set [BPM](https://en.wikipedia.org/wiki/Tempo) of the sequencer, playing the notes defined in the patterns. The time it takes PowerShell to trigger each note during step playback is measured and subtracted from the total step time to attempt to keep timing.
 
-Typically it takes less than 1ms to perform a note operation, but with sequencing average time is about 1ms or less to send a Drum and two instrument notes on the same step. This leaves over a 100ms idle wait time in a 120BPM 16th step and sounds alright! Currently random Random SlowDowns in the 5-10ms seem to happen once ever few hundred steps but seem to be PowerShell related. Overall the timekeeping is unquestionably not a professional grade, but serviceable for having fun!
+Typically it takes less than 1ms to perform a note operation, but with sequencing average time is about 1ms or less to send a Drum and two instrument notes on the same step. This leaves over a 100ms idle wait time in a 120BPM 16th step and sounds alright! Currently random Random SlowDowns in the 5-10ms seem to happen once in awhile. Overall the timekeeping is unquestionably not a professional grade, but serviceable for having fun!
 
 The primary use case for BlueStepper is to use it with a USB Midi Interface to send notes to Drum Machines, Synthesizers, or any other device with a MIDI input.
 
@@ -44,10 +46,12 @@ It's very simple and quite "PowerShell'ey" - This was never meant to be the "BE 
 * Debug Output!
 
 # Todo 
+* Made it ACTUALLY easy for regular people to use - especially with out of box windows 10 midi
 * Midi CLock - Even if it's not perfect a slight drifting clock control to control multiple devices could still be useful!
 * Arpeggiator
 * CHORDS!
   * "Easy Chord" - should just be able to tell a step to play a certain chord..
+* More songs
 
 # Demos
 Here are some classics with some parts that have been sequenced from scratch using BlueStepper and played on real synthesizers
@@ -60,42 +64,16 @@ Here are some classics with some parts that have been sequenced from scratch usi
 
 # Usage
 
-## Setting Up
-
-```powershell
-# Import Modules
-Import-Module "C:\Users\lee\Windows-10-PowerShell-MIDI\PeteBrown.PowerShellMidi\bin\Debug\PeteBrown.PowerShellMidi.dll" -Force
-Import-Module "C:\Users\lee\bluestep_alpha\Module\BlueStepper.psd1" -Force
-
-# Setup Midi Interface Device Outputs
-$TX1 = New-BSMidiOutputDevice -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0000#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}"
-$TX2 = New-BSMidiOutputDevice -DeviceID "\\?\SWD#MMDEVAPI#MIDII_62E8D3FD.P_0001#{6dc23320-ab33-4ce4-80d4-bbb3ebbf2814}"
-
-# Setup Instruments - TODO Reconsider this, maybe the sequ
-$DrumMachine = New-BSInstrument -Name "Arturia Drumbrute Impact" -Instrument "Drum" -MidiOutputDevice $TX1 -MidiChannel 9
-$SynthBass = New-BSInstrument -Name "Korg Volca FM" -Instrument "Bass" -MidiOutputDevice $TX2 -MidiChannel 0
-$SynthLead = New-BSInstrument -Name "Korg Volca Keys" -Instrument "Synth" -MidiOutputDevice $TX2 -MidiChannel 1
-
-# Set Instruments as Active
-# Note - this will allow us switch out devices / Instruments on the fly in the middle of a song
-Set-BSActiveInstrument -Instrument $DrumMachine
-Set-BSActiveInstrument -Instrument $SynthBass
-Set-BSActiveInstrument -Instrument $SynthLead
-```
 
 ## Playing a Demo Song
 ```powershell
 #Demo Song Play.ps1
 
-
 # Load Song
 $Song1 = .\Songs\Robots.ps1
-$Song2 = .\Songs\BlueMonday.ps1
-$Song3 = .\Songs\PapaDontPreach.ps1
-$Song4 = .\Songs\DontYouWantMe.ps1
 
 # Let's Play 
-Invoke-BSPlayBack -Song $Song3 
+Invoke-BSPlayBack -Song $Song1 
 
 
 ```
@@ -181,12 +159,12 @@ New-BSSong -Name $Name -BPM $BPM -TotalStepsToPlay $TotalStepsToPlay -Sequence $
 
 ```
 
-
 # Download
 Source, Release, Docs "Soon"
 
 # Thanks
 
 * [Psychlist1972](https://github.com/Psychlist1972) - Created the Midi Module which made this all possible.
-* [JakobGSvendsen](https://github.com/JakobGSvendsen) - Created PSDJ which gave me a quick start and gave me the idea for this project.
-* [AdamDriscoll](https://github.com/AdamDriscoll) - Powershell performance and profling tips!
+* [MikeCodesDotNET's Multimedia-Timer Wrapper](https://github.com/Psychlist1972/Windows-10-PowerShell-MIDI) - Made the scheduling of note operations actually viable!
+* [JakobGSvendsen](https://github.com/JakobGSvendsen) - Created PSDJ Module which gave me a quick start and gave me the idea for this project.
+* [AdamDriscoll](https://github.com/AdamDriscoll) - Powershell performance and profiling tips!
