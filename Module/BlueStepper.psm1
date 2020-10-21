@@ -96,7 +96,7 @@ Function Invoke-BSPlayBack {
     # Setup Note Operation Runspaces
     Invoke-BSSetupBlockingCollections
     
-    Start-Sleep -Seconds 1.5
+    Start-Sleep -Seconds 2  # wait for collections to boot up
 
     $StepTimer.Start()
 
@@ -201,7 +201,7 @@ Function Invoke-BSPlayBack {
 function Invoke-BSPlayNoteOnOff {
     param (
         $MidiNumber = $null,
-        $NoteLength = 20, # TODO Default Calculated NoteLength for a 16th step note in 4/4 at song BPM
+        $NoteLength = 50, # TODO Default Calculated NoteLength for a 16th step note in 4/4 at song BPM
         $Velocity = 100,
         $MidiChannel = $null,
         $OutputPort = $null,
@@ -328,13 +328,13 @@ Function Invoke-BSSetupBlockingCollections {
             $MidiModulePath
         )
         
-        #Load Midi Module
         Import-Module $MidiModulePath -Force
 
-        Foreach ($StepNote in $NoteStepQueue.GetConsumingEnumerable()) {
+        $NoteStepQueue.GetConsumingEnumerable() | ForEach-Object {
+            $StepNote = $_
             [System.Threading.Thread]::Sleep($StepNote.NoteLength)
             Send-MidiNoteOffMessage -Note $StepNote.MidiNumber -Channel $StepNote.Channel -Velocity $StepNote.Velocity -Port $StepNote.Port
-        }   
+        } 
 
     }
 
@@ -342,14 +342,20 @@ Function Invoke-BSSetupBlockingCollections {
         [System.Collections.Concurrent.ConcurrentQueue[PSObject]]::new()
     )
 
-    $RunspacePool = [runspacefactory]::CreateRunspacePool(1, 8)
+    $RunspacePool = [runspacefactory]::CreateRunspacePool(2, 10)
     $RunspacePool.Open()
-    $Runspace = [PowerShell]::Create()
-    $Runspace.RunspacePool = $RunspacePool
-    $Runspace.AddScript($RunSpaceScript).
-    AddArgument($Global:NoteOffQueue).
-    AddArgument($MidiModulePath)
-    $Runspace.BeginInvoke()
+
+    # Thank you beatiful: https://adamtheautomator.com/powershell-multithreading/#Runspace_Pool_Speed_Demonstration
+    1..10 | Foreach-Object {
+        $Runspace = [PowerShell]::Create()
+        $Runspace.RunspacePool = $RunspacePool
+        $Runspace.AddScript($RunSpaceScript).
+        AddArgument($Global:NoteOffQueue).
+        AddArgument($MidiModulePath)
+        $Runspace.BeginInvoke()
+    }
+
+    
 
 
 }
@@ -639,7 +645,7 @@ Function New-BSStep {
         $Velocity = 100,
 
         [Parameter(Position = 3)]
-        $NoteLength = 20
+        $NoteLength = 50
         
     )
 

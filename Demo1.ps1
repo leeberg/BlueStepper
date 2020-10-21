@@ -22,41 +22,6 @@ Set-BSActiveInstrument -Instrument $DrumMachine
 Set-BSActiveInstrument -Instrument $SynthBass
 Set-BSActiveInstrument -Instrument $SynthLead
 
-
-
-
-$TestNotes = (New-BSStep -MusicNote "A3" -NoteLength 500 )
-
-$TestNotes | ForEach-Object {
-    $_.NoteOffObject.Channel = 0
-
-    $_.NoteOffObject.Port = $SynthLead.MidiOutput.OutputPort
-
-    $_.NoteOffObject
-    
-    #Invoke-BSPlayNoteOnOff -MidiNumber $_.MidiNumber -Velocity $_.Velocity -NoteLength $_.NoteLength -MidiChannel 0 -OutputPort $SynthLead.MidiOutput.OutputPort -NoteOffObject $_.NoteOffObject
-}
-
-
-
-<#
-
-Invoke-BSPlayNoteOnOff -MidiNumber 66 -Velocity 100 -Channel 0 -NoteLength 20  -MidiChannel 0 -OutputPort $SynthLead.MidiOutput.OutputPort
-
-
-for ($i = 0; $i -lt 100; $i++) {
-    Send-MidiNoteOffMessage -Note $i -Velocity 100 -Channel 0 -Port $SynthLead.MidiOutput.OutputPort
-}
-
-
-#Send-MidiNoteOnMessage -Note 66 -Velocity 100 -Channel 0 -Port $SynthBass.MidiOutput.OutputPort -Not
-#Send-MidiNoteOffMessage -Note 66 -Velocity 100 -Channel 0 -Port $SynthBass.MidiOutput.OutputPort
-
-for ($i = 0; $i -lt 100; $i++) {
-    Send-MidiNoteOffMessage -Note $i -Velocity 100 -Channel 0 -Port $SynthLead.MidiOutput.OutputPort
-}
-
-
 # Utility
 Set-BSSequencerDebugMode -EnableDebug $true 
 
@@ -67,4 +32,4 @@ $Song = .\Songs\DontYouWantMe.ps1
 # Let's Play 
 Invoke-BSPlayBack -Song $Song -StartStep 1
 
-#>
+
