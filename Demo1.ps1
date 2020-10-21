@@ -2,6 +2,7 @@
 Import-Module "C:\Users\lee\Windows-10-PowerShell-MIDI\PeteBrown.PowerShellMidi\bin\Debug\PeteBrown.PowerShellMidi.dll" -Force
 Import-Module "C:\Users\lee\BlueStepper\Module\BlueStepper.psd1" -Force
 
+
 # MikeCodesDotNET - Multimedia-Timer - https://github.com/MikeCodesDotNET/Multimedia-Timer
 $Assembly = [System.Reflection.Assembly]::LoadFile("C:\Users\lee\.nuget\packages\multimediatimer\1.0.1\lib\netcoreapp3.1\MultimediaTimer.dll")
 
@@ -22,13 +23,48 @@ Set-BSActiveInstrument -Instrument $SynthBass
 Set-BSActiveInstrument -Instrument $SynthLead
 
 
-#Send-MidiNoteOnMessage -Note 36 -Velocity 100 -Channel 9 -Port $DrumMachine.MidiOutput.OutputPort
+
+
+$TestNotes = (New-BSStep -MusicNote "A3" -NoteLength 500 )
+
+$TestNotes | ForEach-Object {
+    $_.NoteOffObject.Channel = 0
+
+    $_.NoteOffObject.Port = $SynthLead.MidiOutput.OutputPort
+
+    $_.NoteOffObject
+    
+    #Invoke-BSPlayNoteOnOff -MidiNumber $_.MidiNumber -Velocity $_.Velocity -NoteLength $_.NoteLength -MidiChannel 0 -OutputPort $SynthLead.MidiOutput.OutputPort -NoteOffObject $_.NoteOffObject
+}
+
+
+
+<#
+
+Invoke-BSPlayNoteOnOff -MidiNumber 66 -Velocity 100 -Channel 0 -NoteLength 20  -MidiChannel 0 -OutputPort $SynthLead.MidiOutput.OutputPort
+
+
+for ($i = 0; $i -lt 100; $i++) {
+    Send-MidiNoteOffMessage -Note $i -Velocity 100 -Channel 0 -Port $SynthLead.MidiOutput.OutputPort
+}
+
+
+#Send-MidiNoteOnMessage -Note 66 -Velocity 100 -Channel 0 -Port $SynthBass.MidiOutput.OutputPort -Not
+#Send-MidiNoteOffMessage -Note 66 -Velocity 100 -Channel 0 -Port $SynthBass.MidiOutput.OutputPort
+
+for ($i = 0; $i -lt 100; $i++) {
+    Send-MidiNoteOffMessage -Note $i -Velocity 100 -Channel 0 -Port $SynthLead.MidiOutput.OutputPort
+}
+
 
 # Utility
 Set-BSSequencerDebugMode -EnableDebug $true 
 
 # Load Song
-$Song = .\Songs\Robots.ps1
+$Song = .\Songs\BlueMonday.ps1
+$Song = .\Songs\DontYouWantMe.ps1
 
 # Let's Play 
 Invoke-BSPlayBack -Song $Song -StartStep 1
+
+#>

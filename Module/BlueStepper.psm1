@@ -145,12 +145,9 @@ Function Invoke-BSPlayBack {
 
             # NEW STEP TO PROCESS
             $lastStep = $global:CurrentPlayBackStep
-        
-            #DRUMS
-            
+             
+            #INVOKE PLAYBACK       
             Invoke-BSPlayStepNotes -DrumNotes $DrumStepNotesToPlay -BassNotes $BassStepNotesToPlay -SynthNotes $SynthStepNotesToPlay
-
-           
 
             if ($null -ne $CurrentDrumPattern) {
                 $CurrentDrumPattern_Step ++
@@ -218,7 +215,7 @@ function Invoke-BSPlayNoteOnOff {
         #### Queue Note Off
         if ($NoteLength -ne 0) {
             # TODO - NEed to pass in QUEUE TIME SO Note off can compare note time to current
-                  Invoke-BSQueueNoteOff -MidiNumber $MidiNumber -Channel $MidiChannel -Velocity $Velocity -Port $OutputPort -NoteLength $NoteLength -NoteOffObject $NoteOffObject
+                  Invoke-BSQueueNoteOff -MidiNumber $MidiNumber -Channel $MidiChannel -Velocity $Velocity -Port $OutputPort -NoteLength 0 -NoteOffObject $NoteOffObject
         }
         
         $MidiNumber = $null
@@ -333,24 +330,26 @@ Function Invoke-BSSetupBlockingCollections {
         
         #Load Midi Module
         Import-Module $MidiModulePath -Force
-     
-        foreach ($StepNote in $NoteStepQueue.GetConsumingEnumerable()) {
+
+        Foreach ($StepNote in $NoteStepQueue.GetConsumingEnumerable()) {
             [System.Threading.Thread]::Sleep($StepNote.NoteLength)
             Send-MidiNoteOffMessage -Note $StepNote.MidiNumber -Channel $StepNote.Channel -Velocity $StepNote.Velocity -Port $StepNote.Port
-        }
+        }   
+
     }
 
     $Global:NoteOffQueue = [System.Collections.Concurrent.BlockingCollection[PSObject]]::new(
         [System.Collections.Concurrent.ConcurrentQueue[PSObject]]::new()
     )
+
     $RunspacePool = [runspacefactory]::CreateRunspacePool(1, 8)
-    $null = $RunspacePool.Open()
+    $RunspacePool.Open()
     $Runspace = [PowerShell]::Create()
     $Runspace.RunspacePool = $RunspacePool
-    $null = $Runspace.AddScript($RunSpaceScript).
+    $Runspace.AddScript($RunSpaceScript).
     AddArgument($Global:NoteOffQueue).
     AddArgument($MidiModulePath)
-    $null = $Runspace.BeginInvoke()
+    $Runspace.BeginInvoke()
 
 
 }
@@ -652,9 +651,12 @@ Function New-BSStep {
 
     if ($null -ne $MusicNote -and $null -eq $MidiNumber) {
         switch ($MusicNote) {
+
             "A0" { $MidiNumber = 21 }
             "A#0" { $MidiNumber = 22 }
             "B0" { $MidiNumber = 23 }
+            
+            # OCTAVE 2
             "C1" { $MidiNumber = 24 }
             "C#1" { $MidiNumber = 25 }
             "D1" { $MidiNumber = 26 }
@@ -667,6 +669,8 @@ Function New-BSStep {
             "A1" { $MidiNumber = 33 }
             "A#1" { $MidiNumber = 34 }
             "B1" { $MidiNumber = 35 }
+
+            # OCTAVE 3
             "C2" { $MidiNumber = 36 }
             "C#2" { $MidiNumber = 37 }
             "D2" { $MidiNumber = 38 }
@@ -679,6 +683,8 @@ Function New-BSStep {
             "A2" { $MidiNumber = 45 }
             "A#2" { $MidiNumber = 46 }
             "B2" { $MidiNumber = 47 }
+            
+            # OCTAVE 3
             "C3" { $MidiNumber = 48 }
             "C#3" { $MidiNumber = 49 }
             "D3" { $MidiNumber = 50 }
@@ -691,7 +697,9 @@ Function New-BSStep {
             "A3" { $MidiNumber = 57 }
             "A#3" { $MidiNumber = 58 }
             "B3" { $MidiNumber = 59 }
-            "C4" { $MidiNumber = 60 }
+    
+            # OCTAVE 4
+            "C4" { $MidiNumber = 60 }    #MIDDLE C
             "C#4" { $MidiNumber = 61 }
             "D4" { $MidiNumber = 62 }
             "D#4" { $MidiNumber = 63 }
@@ -703,6 +711,9 @@ Function New-BSStep {
             "A4" { $MidiNumber = 69 }
             "A#4" { $MidiNumber = 70 }
             "B4" { $MidiNumber = 71 }
+            
+            # OCTAVE 5
+            "B5" { $MidiNumber = 83 }
             "C5" { $MidiNumber = 72 }
             "C#5" { $MidiNumber = 73 }
             "D5" { $MidiNumber = 74 }
@@ -714,7 +725,8 @@ Function New-BSStep {
             "G#5" { $MidiNumber = 80 }
             "A5" { $MidiNumber = 81 }
             "A#5" { $MidiNumber = 82 }
-            "B5" { $MidiNumber = 83 }
+
+            # OCTAVE 6
             "C6" { $MidiNumber = 84 }
             "C#6" { $MidiNumber = 85 }
             "D6" { $MidiNumber = 86 }
@@ -727,6 +739,8 @@ Function New-BSStep {
             "A6" { $MidiNumber = 93 }
             "A#6" { $MidiNumber = 94 }
             "B6" { $MidiNumber = 95 }
+
+            # OCTAVE 7
             "C7" { $MidiNumber = 96 }
             "C#7" { $MidiNumber = 97 }
             "D7" { $MidiNumber = 98 }
@@ -739,6 +753,8 @@ Function New-BSStep {
             "A7" { $MidiNumber = 105 }
             "A#7" { $MidiNumber = 106 }
             "B7" { $MidiNumber = 107 }
+
+            # OCTAVE 8
             "C8" { $MidiNumber = 108 }
             "C#8" { $MidiNumber = 109 }
             "D8" { $MidiNumber = 110 }
@@ -751,6 +767,8 @@ Function New-BSStep {
             "A8" { $MidiNumber = 117 }
             "A#8" { $MidiNumber = 118 }
             "B8" { $MidiNumber = 119 }
+
+            # OCTAVE 9
             "C9" { $MidiNumber = 120 }
             "C#9" { $MidiNumber = 121 }
             "D9" { $MidiNumber = 122 }
@@ -759,6 +777,9 @@ Function New-BSStep {
             "F9" { $MidiNumber = 125 }
             "F#9" { $MidiNumber = 126 }
             "G9" { $MidiNumber = 127 }
+
+
+
             "Kick" { $MidiNumber = 36 } # TODO Arturia Drumbrute Defaults - need to set via cmdlet
             "Snare" { $MidiNumber = 37 }
             "Clap" { $MidiNumber = 38 }
