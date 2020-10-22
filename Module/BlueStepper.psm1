@@ -37,7 +37,7 @@ Function Invoke-BSPlayBack {
     Unregister-Event -SourceIdentifier Timer.Output -ErrorAction Ignore
 
     #Create the event subscription
-    Register-ObjectEvent -InputObject $StepTimer -EventName Elapsed -SourceIdentifier Timer.Output -Action {
+    $RegisteredEvent = Register-ObjectEvent -InputObject $StepTimer -EventName Elapsed -SourceIdentifier Timer.Output -Action {
         $Global:CurrentPlayBackStep++
     }
     
@@ -342,17 +342,23 @@ Function Invoke-BSSetupBlockingCollections {
         [System.Collections.Concurrent.ConcurrentQueue[PSObject]]::new()
     )
 
-    $RunspacePool = [runspacefactory]::CreateRunspacePool(2, 10)
+    $RunspacePool = [runspacefactory]::CreateRunspacePool(1, 10)
+    
     $RunspacePool.Open()
 
     # Thank you beatiful: https://adamtheautomator.com/powershell-multithreading/#Runspace_Pool_Speed_Demonstration
     1..10 | Foreach-Object {
         $Runspace = [PowerShell]::Create()
         $Runspace.RunspacePool = $RunspacePool
-        $Runspace.AddScript($RunSpaceScript).
+        #$Runspace.AddScript($RunSpaceScript).AddArgument($Global:NoteOffQueue)
+        #$Runspace.AddScript($RunSpaceScript).AddArgument($MidiModulePath)
+
+        $ArgurmentAdd = $Runspace.AddScript($RunSpaceScript).
         AddArgument($Global:NoteOffQueue).
         AddArgument($MidiModulePath)
-        $Runspace.BeginInvoke()
+        $BeginInvoke = $Runspace.BeginInvoke()
+
+   
     }
 
     
