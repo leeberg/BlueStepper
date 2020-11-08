@@ -1,8 +1,103 @@
 
+Function Import-BSSongCSV {
+    param (
+        $Name = "MyImportedSong",
+        $BPM = 120,
+        $FilePath = "C:\Users\lee\Desktop\dywmb.csv",
+        $StartStep = 1
+    )
+
+    $DrumSteps = @{}
+    $BassSteps = @{}
+    $SynthSteps = @{}
+    $Synth2 = @{}
+
+    $SongCSVSteps = Import-csv -Path $FilePath
+
+    $SongLength = $SongCSVSteps.Length
+
+    $SongCSVSteps | ForEach-Object{
+
+        #Write-Host ("Processing Step: "+ $_.Step + " - " + $_.Drums + " - " + $_.Bass + " " + $_.Synth)
+
+        $CurrentStep = $_.Step
+        $DrumStepObjects = @()
+        $BassStepObjects = @()
+        $SynthStepObjects = @()
+
+        $_.Drums -split "," | ForEach-Object {
+            if($_ -ne "")
+            {
+                $DrumStepObjects = $DrumStepObjects + (New-BSStep -MusicNote $_)
+            }
+        }
+        $DrumSteps.Add($CurrentStep, $DrumStepObjects)
+
+
+
+        # TODO chord support
+        $_.Bass -split "," | ForEach-Object {
+            if($_ -ne "")
+            {
+                $BassSteps.Add($CurrentStep, (New-BSStep -MusicNote $_))
+            }
+            else {
+                #$BassSteps.Add($CurrentStep, (""))
+            }
+        }
+
+        $_.Synth -split "," | ForEach-Object {
+            
+            if($_ -Match "_")
+            {
+                $NoteAndLength = $_
+                
+                $MusicNote = $NoteAndLength.substring(0,3)
+
+                $MusicNote = $NoteAndLength.Substring(0,$NoteAndLength.IndexOf("_"))
+                $MusicNoteLength = $NoteAndLength.Substring(($NoteAndLength.IndexOf("_")+1),(($NoteAndLength.Length-$NoteAndLength.IndexOf("_"))-1))
+                
+                if($MusicNote -ne "")
+                {
+                    $SynthStepObjects += (New-BSStep -MusicNote $MusicNote -NoteLength $MusicNoteLength)
+                }
+
+            }
+            else
+            {
+                if($_ -ne "")
+                {
+                    $SynthStepObjects += (New-BSStep -MusicNote $_)
+                }
+            }
+        }
+
+        $SynthSteps.Add($CurrentStep,$SynthStepObjects)
+
+    }
+
+  
+
+    $DrumPattern = New-BSPattern -Name "Drums" -Instrument "Drum" -Notes $DrumSteps
+    $BassPattern =  New-BSPattern -Name "Bass" -Instrument "Bass" -Notes $BassSteps
+    $Synth1Pattern = New-BSPattern -Name "Synth1" -Instrument "Synth" -Notes $SynthSteps
+      
+    ####### SEQUENCES
+    $DrumSequence =  @(New-BSSequencePattern -FirstStep 1 -LastStep $SongLength -Pattern $DrumPattern)
+    $BassSequence =  @(New-BSSequencePattern -FirstStep 1 -LastStep $SongLength -Pattern $BassPattern)
+    $SynthSequence = @(New-BSSequencePattern -FirstStep 1 -LastStep $SongLength -Pattern $Synth1Pattern)
+
+    Return (New-BSSong -Name $Name -BPM $BPM -TotalStepsToPlay $SongLength -DrumSequence $DrumSequence -BassSequence $BassSequence -SynthSequence $SynthSequence)
+
+    
+
+}
+
 
 
 Function Invoke-BSPlayBack {
     param (
+        $BPM = 120,
         $Song,
         $DrumPattern,
         $BassPattern,
@@ -10,8 +105,17 @@ Function Invoke-BSPlayBack {
         $StartStep = 1
     )
 
+    # Some Timing Calculations
+
     #Defaults   # todo - make this a Seqeuncer Settings PS Function
-    $Global:BPM = $Song.BPM
+
+    $Global:BPM
+
+    if(null -ne $Song)
+    {
+        $Global:BPM = $Song.BPM
+    }
+
 
     # 4 Steps in a Beat
     # 120 BPM = 480 Steps a Minute
@@ -26,25 +130,25 @@ Function Invoke-BSPlayBack {
     $DateResolution = $Date.AddMilliseconds(1)
     $DateInterval = $Date.AddMilliseconds($Global:StepInterval)  # BPM
 
+
+    # Setup MultiMedia Timer
     $StepTimer = New-Object MultimediaTimer.Timer
+    $StepTimer.Interval = New-TimeSpan -Start $Date -End $DateInterval
+    $StepTimer.Resolution = New-TimeSpan -Start $Date -End $DateResolution
+    Unregister-Event -SourceIdentifier Timer.Output -ErrorAction Ignore
 
     $global:CurrentPlayBackStep = 1
     $lastStep = 0
-
-    $StepTimer.Interval = New-TimeSpan -Start $Date -End $DateInterval
-    $StepTimer.Resolution = New-TimeSpan -Start $Date -End $DateResolution
-
-    Unregister-Event -SourceIdentifier Timer.Output -ErrorAction Ignore
 
     #Create the event subscription
     $RegisteredEvent = Register-ObjectEvent -InputObject $StepTimer -EventName Elapsed -SourceIdentifier Timer.Output -Action {
         $Global:CurrentPlayBackStep++
     }
     
-
-    $Global:ArpPattern = "UP_1"
-
     $Global:CurrentPlayBackStep = $StartStep
+
+
+    # Variables
     $CurrentDrumPattern_Step = 1
     $CurrentBassPattern_Step = 1
     $CurrentSynthPattern_Step = 1
@@ -54,11 +158,10 @@ Function Invoke-BSPlayBack {
     $DrumStepNotesToPlay = $null
     $BassStepNotesToPlay = $null
     $SynthStepNotesToPlay = $null
-    $PlayBackTimingReport = @{ }
 
     if ($null -ne $Song) {
         Set-BSTiming -BPM $Song.BPM
-        $PlayBackSequence = $Song.SongPatternSequence
+
         $DrumSequences = $Song.SongDrumSequence
         $BassSequences = $Song.SongBassSequence
         $SynthSequences = $Song.SongSynthSequence
@@ -67,11 +170,11 @@ Function Invoke-BSPlayBack {
         Write-Host ("Playing: $($Song.Name) - $($Song.BPM) BPM")
 
         #Starting Drum Pattern
-        $CurrentDrumPattern = $DrumSequences | Where { ($_.FirstStep -eq $StartStep) }
+        $CurrentDrumPattern = $DrumSequences | Where-Object { ($_.FirstStep -eq $StartStep) }
         #Starting Bass Pattern
-        $CurrentBassPattern = $BassSequences | Where { ($_.FirstStep -eq $StartStep) }
+        $CurrentBassPattern = $BassSequences | Where-Object { ($_.FirstStep -eq $StartStep) }
         #Starting Synth Pattern
-        $CurrentSynthPattern = $SynthSequences | Where { ($_.FirstStep -eq $StartStep) }
+        $CurrentSynthPattern = $SynthSequences | Where-Object { ($_.FirstStep -eq $StartStep) }
                 
         if ($null -ne $CurrentDrumPattern) {
             $DrumStepNotesToPlay = $CurrentDrumPattern.Pattern.Pattern[1]
@@ -535,26 +638,6 @@ Function New-BSPattern {
 
 }
 
-Function New-BSSequence {
-    param (
-        [Parameter(Position = 0, mandatory = $true)]
-        $SequencePatterns
-    )
-  
-    $SongPatternSequence = $SequencePatterns 
-    
-    <#
-    [hashtable]$SongPatternSequence = @{ }
-    $SequencePatterns | ForEach-Object{
-        $SongPatternSequence.Add($_.StartingStep, $_.Pattern)
-    }
-    #>
-
-    Return $SongPatternSequence
-
-
-
-}
 
 Function New-BSSequencePattern {
     param (
@@ -567,11 +650,13 @@ Function New-BSSequencePattern {
 
     [int]$TotalPatternSteps = ($LastStep - $FirstStep) + 1
 
+    <# TODO - Song Import Reviewer for stuff like this..
     $LastStep | ForEach-Object { if ($_ % 2 -ne 0 ) { Write-Warning "Last Step: $_ for: $($Pattern.Name) Should be an even number!" } }
     $LastStep | ForEach-Object { if ($_ % 4 -ne 0 ) { Write-Warning "Last Step: $_ for: $($Pattern.Name)should be divisible by 4!" } }
     $FirstStep | ForEach-Object { if ($_ % 2 -ne 1) { Write-Warning "First Step $_ for: $($Pattern.Name) Should be an ODD number!" } }
     
     { if ($TotalPatternSteps%2 -eq 0) { Write-Warning ("Total Pattern Steps for $($Pattern.Name) should be an EVEN number - was $TotalPatternSteps!") } }
+    #>
 
     return [PSCustomObject]@{
         FirstStep = $FirstStep
@@ -603,7 +688,6 @@ Function New-BSSong {
         Name                = $Name
         BPM                 = $BPM
         TotalStepsToPlay    = $TotalStepsToPlay
-        SongPatternSequence = $Sequence
         SongDrumSequence    = $DrumSequence
         SongBassSequence    = $BassSequence
         SongSynthSequence   = $SynthSequence
